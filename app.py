@@ -66,9 +66,7 @@ st.title("⚡ インスタント・エゴグラム")
 st.caption("文章を貼り付けるだけで、AIが深層心理を即座にプロファイリングします。")
 
 st.sidebar.title("👤 プロフィール設定")
-# 性別のデフォルトを空白（index=None）に設定
 gender = st.sidebar.selectbox("対象の性別", ["男性", "女性", "その他", "回答しない"], index=None, placeholder="選択してください")
-# 年齢を数値入力からセレクトボックス（10代〜70代以上）に変更
 age = st.sidebar.selectbox("対象の年齢", ["10代", "20代", "30代", "40代", "50代", "60代", "70代以上"], index=2)
 
 input_text = st.text_area("解析したい文章を入力してください（自己紹介文、SNSの投稿、小説のセリフなど）", height=300, placeholder="ここに文章をペーストしてください...")
@@ -91,14 +89,39 @@ if st.session_state.diagnosis:
     col1, col2 = st.columns([1, 1])
     
     with col1:
-        st.subheader("📊 推論エゴグラム・スコア")
+        st.subheader("📊 エゴグラム・プロファイル")
         df = pd.DataFrame(list(st.session_state.scores.items()), columns=['項目', '値'])
-        fig = go.Figure(go.Bar(
+        
+        fig = go.Figure()
+        
+        # 1. 棒グラフ（淡く薄い色に変更）
+        fig.add_trace(go.Bar(
             x=df['項目'], 
-            y=df['値'], 
-            marker_color=['#ff4b4b' if v < 0 else '#1f77b4' for v in df['値']]
+            y=df['値'],
+            name='スコア',
+            marker_color='rgba(135, 206, 250, 0.4)',  # 淡い水色（透明度0.4）
+            marker_line_color='rgba(135, 206, 250, 1)', # 枠線だけ少し濃く
+            marker_line_width=1.5
         ))
-        fig.update_layout(yaxis=dict(range=[-10.1, 10.1], zeroline=True), height=400, margin=dict(l=10, r=10, t=10, b=10))
+        
+        # 2. 折れ線グラフ（目立たせるために濃い色で重ね書き）
+        fig.add_trace(go.Scatter(
+            x=df['項目'], 
+            y=df['値'],
+            name='波形',
+            mode='lines+markers',
+            line=dict(color='#ff4b4b', width=4), # 濃い赤で強調
+            marker=dict(size=10, color='#ff4b4b', symbol='circle')
+        ))
+        
+        fig.update_layout(
+            yaxis=dict(range=[-10.1, 10.1], zeroline=True, gridcolor='rgba(200, 200, 200, 0.2)'),
+            xaxis=dict(gridcolor='rgba(200, 200, 200, 0.2)'),
+            height=450,
+            margin=dict(l=10, r=10, t=10, b=10),
+            showlegend=False,
+            plot_bgcolor='rgba(0,0,0,0)' # 背景を透過させてスッキリと
+        )
         st.plotly_chart(fig, width="stretch")
 
     with col2:
