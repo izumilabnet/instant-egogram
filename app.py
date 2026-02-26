@@ -33,7 +33,7 @@ def get_batch_analysis(text, gender, age):
         model_id = "gemini-2.5-flash"
         
         prompt_content = f"""
-        属性: {age}歳、{gender}。
+        属性: {age}、{gender}。
         以下の文章から、書き手のエゴグラム（CP, NP, A, FC, AC）を各-10〜10の範囲で推論し、性格診断を行ってください。
         
         【解析対象の文章】
@@ -66,15 +66,17 @@ st.title("⚡ インスタント・エゴグラム")
 st.caption("文章を貼り付けるだけで、AIが深層心理を即座にプロファイリングします。")
 
 st.sidebar.title("👤 プロフィール設定")
-gender = st.sidebar.selectbox("対象の性別", ["男性", "女性", "その他", "回答しない"])
-age = st.sidebar.number_input("対象 of 年齢", min_value=0, max_value=120, value=30)
+# 性別のデフォルトを空白（index=None）に設定
+gender = st.sidebar.selectbox("対象の性別", ["男性", "女性", "その他", "回答しない"], index=None, placeholder="選択してください")
+# 年齢を数値入力からセレクトボックス（10代〜70代以上）に変更
+age = st.sidebar.selectbox("対象の年齢", ["10代", "20代", "30代", "40代", "50代", "60代", "70代以上"], index=2)
 
 input_text = st.text_area("解析したい文章を入力してください（自己紹介文、SNSの投稿、小説のセリフなど）", height=300, placeholder="ここに文章をペーストしてください...")
 
 if st.button("🚀 精密診断を開始する"):
     if input_text:
         with st.spinner("AIが深層心理を解析中..."):
-            result = get_batch_analysis(input_text, gender, age)
+            result = get_batch_analysis(input_text, gender if gender else "未指定", age)
             if result and "scores" in result:
                 st.session_state.diagnosis = result
                 st.session_state.scores = result["scores"]
