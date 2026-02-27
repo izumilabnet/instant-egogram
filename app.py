@@ -14,6 +14,7 @@ st.set_page_config(page_title="インスタント・エゴグラム", layout="wi
 if 'auth' not in st.session_state: st.session_state.auth = False
 if 'diagnosis' not in st.session_state: st.session_state.diagnosis = None
 if 'scores' not in st.session_state: st.session_state.scores = {"CP":0.0, "NP":0.0, "A":0.0, "FC":0.0, "AC":0.0}
+if 'raw_samples' not in st.session_state: st.session_state.raw_samples = []
 
 # --- 2. 認証 ---
 if not st.session_state.auth:
@@ -25,7 +26,7 @@ if not st.session_state.auth:
             st.rerun()
     st.stop()
 
-# --- 3. 分析エンジン (1回のリクエストで10回分の生データを取得) ---
+# --- 3. 分析エンジン (5回分のサンプリング) ---
 def get_batch_analysis(text, gender, age):
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key: return None
@@ -38,8 +39,8 @@ def get_batch_analysis(text, gender, age):
         以下の文章から、書き手のエゴグラム（CP, NP, A, FC, AC）を推論し、性格診断を行ってください。
         
         【精密解析ルール】
-        1. 診断のブレを避けるため、まず内部で対象文章を10回多角的にプロファイリングしてください。
-        2. その10回分のスコア（各-10〜10）を「sampling_data」としてリスト形式で出力してください。
+        1. 診断のブレを避けるため、まず内部で対象文章を5回多角的にプロファイリングしてください。
+        2. その5回分のスコア（各-10〜10）を「sampling_data」としてリスト形式で出力してください。
         3. マイナス値は「反転したエネルギー（例：NPなら冷徹、ACなら反抗心）」として解釈すること。
         
         【対象文章】
@@ -48,12 +49,12 @@ def get_batch_analysis(text, gender, age):
         【出力形式：JSON】
         1. "sampling_data": [
              {{"CP": 数値, "NP": 数値, "A": 数値, "FC": 数値, "AC": 数値}},
-             ... (合計10個の異なる推論データ)
+             ... (合計5個の異なる推論データ)
            ]
         2. "性格類型": "短いキャッチコピー"
-        3. "特徴": "200字程度の詳細解説（10回の推論を統合した深層心理の洞察）"
+        3. "特徴": "200字程度の詳細解説（5回の推論を統合した深層心理の洞察）"
         4. "適職": "100字以内の箇書き"
-        5. "恋愛のアドバイス": "100字以内のポイント"
+        5. "恋愛のアドバイス": "100字以内にポイント"
         """
 
         response = client.models.generate_content(
@@ -77,6 +78,7 @@ def get_batch_analysis(text, gender, age):
         
         return {
             "scores": final_scores,
+            "raw_samples": samples,
             "性格類型": raw_data["性格類型"],
             "特徴": raw_data["特徴"],
             "適職": raw_data["適職"],
@@ -87,7 +89,7 @@ def get_batch_analysis(text, gender, age):
 
 # --- 4. 画面レイアウト ---
 st.title("⚡ インスタント・エゴグラム (高密度サンプリング版)")
-st.caption("1回の通信で10層の心理プロファイリングを同時に行い、統計的平均から「ブレない自分」を可視化します。")
+st.caption("1回の通信で5層の心理プロファイリングを同時に行い、統計的平均から「ブレない自分」を可視化します。")
 
 st.sidebar.title("👤 プロフィール設定")
 gender = st.sidebar.selectbox("対象の性別", ["男性", "女性", "その他", "回答しない"], index=None, placeholder="選択してください")
@@ -97,11 +99,12 @@ input_text = st.text_area("解析したい文章を入力してください", he
 
 if st.button("🚀 精密診断を開始する"):
     if input_text:
-        with st.spinner("AIが10層の心理データを一括展開中..."):
+        with st.spinner("AIが5層の心理データを一括展開中..."):
             result = get_batch_analysis(input_text, gender if gender else "未指定", age)
             if result and "scores" in result:
                 st.session_state.diagnosis = result
                 st.session_state.scores = result["scores"]
+                st.session_state.raw_samples = result["raw_samples"]
                 st.rerun()
             else:
                 st.error("解析に失敗しました。もう一度お試しください。")
@@ -123,9 +126,20 @@ if st.session_state.diagnosis:
     with col2:
         res = st.session_state.diagnosis
         st.success(f"### 🏆 {res.get('性格類型', '診断結果')}")
-        st.write(f"**【特徴：10層統合プロファイリング】**\n{res.get('特徴', '')}")
+        st.write(f"**【特徴：5層統合プロファイリング】**\n{res.get('特徴', '')}")
         st.write(f"**【適職】**\n{res.get('適職', '')}")
         st.write(f"**【恋愛のアドバイス】**\n{res.get('恋愛のアドバイス', '')}")
-        if st.button("🔄 新しい診断を行う"):
-            st.session_state.diagnosis = None
-            st.rerun()
+        
+    st.divider()
+    
+    # 追加：サンプリングデータの詳細表示
+    with st.expander("🔍 解析の根拠（5回分の詳細スコア）"):
+        sample_df = pd.DataFrame(st.session_state.raw_samples)
+        sample_df.index = [f"試行 {i+1}" for i in range(len(sample_df))]
+        st.table(sample_df)
+        st.caption("※これらの5つの推論結果を統計的に統合し、最終的なエゴグラムを生成しています。")
+
+    if st.button("🔄 新しい診断を行う"):
+        st.session_state.diagnosis = None
+        st.session_state.raw_samples = []
+        st.rerun()
