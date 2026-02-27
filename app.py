@@ -110,7 +110,7 @@ def get_single_analysis(text, gender, age, client):
         "特徴": "...", 
         "適職": "...", 
         "恋愛のアドバイス": "...",
-        "成長へ向けて": "今のエゴグラムが人生で積み上げた大切な個性であることを肯定する文章から始め、無理なく成長するための方向性を150字程度で具体的に記述してください"
+        "成長へ向けて": "今のエゴグラムが人生で積み上げた大切な個性であることを肯定する文章から始め、無理なく成長するための方向性を250字程度で具体的に記述してください"
     }}
     """
     try:
@@ -143,10 +143,9 @@ def run_full_diagnosis(text, gender, age):
     
     for key in ["CP", "NP", "A", "FC", "AC"]:
         vals = [int(round(float(s.get(key, 0)))) for s in raw_scores_list]
-        modes = statistics.multimode(vals)
-        mode_val = statistics.mean(modes)
-        final_scores[key] = round(mode_val, 2)
-        count_in_range = sum(1 for v in vals if (mode_val - 1) <= v <= (mode_val + 1))
+        median_val = statistics.median(vals)
+        final_scores[key] = round(median_val, 2)
+        count_in_range = sum(1 for v in vals if (median_val - 1) <= v <= (median_val + 1))
         confidences[key] = (count_in_range / ANALYSIS_TRIALS) * 100
 
     base_res = all_results[0]
@@ -164,7 +163,7 @@ if st.session_state.diagnosis is None:
     with st.sidebar:
         gender = st.selectbox("性別", ["", "男性", "女性", "その他", "回答しない"], index=0)
         age = st.selectbox("年齢", ["", "10代", "20代", "30代", "40代", "50代", "60代", "70代以上"], index=0)
-        st.info("独立推論の結果から『最頻値』を特定し、その集中度を信頼度として算出します。")
+        st.info("独立推論の結果から『中央値』を特定し、その集中度を信頼度として算出します。")
 
     input_text = st.text_area("Analysis Text", height=200, key="main_input", label_visibility="collapsed")
 
@@ -201,7 +200,7 @@ else:
     st.markdown("<div class='res-card'>", unsafe_allow_html=True)
     c1, c2 = st.columns([1, 1.5])
     with c1:
-        st.markdown("#### 🎯 解析確信度 (最頻値±1の含有率)")
+        st.markdown("#### 🎯 解析確信度 (中央値±1の含有率)")
         if ANALYSIS_TRIALS > 1:
             for key, conf in res["confidences"].items():
                 st.write(f"**{key}**: {conf:.0f}% Match")
