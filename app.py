@@ -162,8 +162,8 @@ st.markdown("<h1 class='main-title'>INSTANT EGOGRAM PRO</h1>", unsafe_allow_html
 
 if st.session_state.diagnosis is None:
     with st.sidebar:
-        gender = st.selectbox("性別", ["男性", "女性", "その他"], index=1)
-        age = st.selectbox("年齢", ["10代", "20代", "30代", "40代", "50代", "60代", "70代以上"], index=2)
+        gender = st.selectbox("性別", ["", "男性", "女性", "その他", "回答しない"], index=0)
+        age = st.selectbox("年齢", ["", "10代", "20代", "30代", "40代", "50代", "60代", "70代以上"], index=0)
         st.info("独立推論の結果から『最頻値』を特定し、その集中度を信頼度として算出します。")
 
     input_text = st.text_area("解析文章を入力", height=200, key="main_input")
