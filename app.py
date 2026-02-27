@@ -226,6 +226,10 @@ else:
     st.info(res.get("input_text", "データがありません"))
     st.markdown("</div>", unsafe_allow_html=True)
 
+    # 印刷ボタン
+    if st.button("🖨️ この結果を印刷する", key="print_btn"):
+        st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
+
     if st.button("🔄 新しい文章を解析する", key="reset_btn"):
         st.session_state.diagnosis = None
         st.rerun()
