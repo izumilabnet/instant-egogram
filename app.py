@@ -13,7 +13,7 @@ import time
 ANALYSIS_TRIALS = 1 
 
 # --- 1. ページ設定とスタイル ---
-st.set_page_config(page_title="INSTANT EGOGRAM PRO", layout="wide")
+st.set_page_config(page_title="INSTANT EGOGRAM", layout="wide")
 
 st.markdown("""
     <style>
@@ -35,8 +35,8 @@ if 'diagnosis' not in st.session_state: st.session_state.diagnosis = None
 
 # --- 2. 認証・トップページ ---
 if not st.session_state.auth:
-    st.markdown("<h1 class='main-title'>心理ゲーム・アナライザ</h1>", unsafe_allow_html=True)
-    st.markdown("<p class='main-subtitle'>〜 交流分析理論に基づく深層心理の解明 〜</p>", unsafe_allow_html=True)
+    st.markdown("<h1 class='main-title'>インスタント・エゴグラム</h1>", unsafe_allow_html=True)
+    st.markdown("<p class='main-subtitle'>〜 交流分析理論に基づく自己理解ツール 〜</p>", unsafe_allow_html=True)
 
     col_top_1, col_top_2, col_top_3 = st.columns([1, 2, 1])
     
@@ -51,8 +51,8 @@ if not st.session_state.auth:
         st.markdown("""
             <div class='feature-box'>
                 <div style='display: flex; justify-content: space-around; font-size: 0.85rem; color: #6d28d9;'>
-                    <div>✓ ゲームの特定<br>✓ OK牧場の変遷<br>✓ 具体的な対応策</div>
-                    <div>✓ 無意識の利得<br>✓ 残酷な結末予測<br>✓ 心の処方箋</div>
+                    <div>✓ 5つの自我状態<br>✓ 自律状態のバランス<br>✓ 対話の傾向</div>
+                    <div>✓ 無意識のクセ<br>✓ 成長へ向けて<br>✓ 適職・恋愛</div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
@@ -215,3 +215,6 @@ else:
     if st.button("🔄 新しい文章を解析する", key="reset_btn"):
         st.session_state.diagnosis = None
         st.rerun()
+
+# --- 入力内容 ---
+# st.write(f"解析対象テキスト: {input_text}")
