@@ -58,8 +58,8 @@ if not st.session_state.auth:
         """, unsafe_allow_html=True)
 
         st.markdown("<p style='text-align: center; color: #6b7280; font-size: 0.7rem; font-weight: bold; margin-bottom: 0;'>PRIVATE ACCESS</p>", unsafe_allow_html=True)
-        pw = st.text_input("", type="password", placeholder="パスワードを入力してください")
-        if st.button("分析を開始する"):
+        pw = st.text_input("", type="password", placeholder="パスワードを入力してください", key="login_pw")
+        if st.button("分析を開始する", key="login_btn"):
             if pw == "okok":
                 st.session_state.auth = True
                 st.rerun()
@@ -97,7 +97,7 @@ if not st.session_state.auth:
         """, unsafe_allow_html=True)
     st.stop()
 
-# --- 3. 分析機能（認証後） ---
+# --- 3. 分析エンジン ---
 def get_single_analysis(text, gender, age, client):
     model_id = "gemini-2.5-flash" 
     prompt_content = f"""
@@ -157,23 +157,26 @@ def run_full_diagnosis(text, gender, age):
         "成長へ向けて": base_res.get("成長へ向けて", "")
     }
 
+# --- 4. メイン画面（認証後） ---
 st.markdown("<h1 class='main-title'>INSTANT EGOGRAM PRO</h1>", unsafe_allow_html=True)
 
-with st.sidebar:
-    gender = st.selectbox("性別", ["男性", "女性", "その他"], index=1)
-    age = st.selectbox("年齢", ["10代", "20代", "30代", "40代", "50代", "60代", "70代以上"], index=2)
-    st.info("独立推論の結果から『最頻値』を特定し、その集中度を信頼度として算出します。")
+if st.session_state.diagnosis is None:
+    with st.sidebar:
+        gender = st.selectbox("性別", ["男性", "女性", "その他"], index=1)
+        age = st.selectbox("年齢", ["10代", "20代", "30代", "40代", "50代", "60代", "70代以上"], index=2)
+        st.info("独立推論の結果から『最頻値』を特定し、その集中度を信頼度として算出します。")
 
-input_text = st.text_area("解析文章を入力", height=200)
+    input_text = st.text_area("解析文章を入力", height=200, key="main_input")
 
-if st.button("🚀 診断プロファイルを開始"):
-    if input_text:
-        result = run_full_diagnosis(input_text, gender, age)
-        if result:
-            st.session_state.diagnosis = result
-            st.rerun()
-
-if st.session_state.diagnosis:
+    if st.button("🚀 診断プロファイルを開始", key="diag_btn"):
+        if input_text:
+            result = run_full_diagnosis(input_text, gender, age)
+            if result:
+                st.session_state.diagnosis = result
+                st.rerun()
+        else:
+            st.warning("文章を入力してください。")
+else:
     res = st.session_state.diagnosis
     col1, col2 = st.columns([1.2, 1])
     
@@ -191,7 +194,6 @@ if st.session_state.diagnosis:
     with col2:
         st.markdown(f"<div class='res-card'><h2 style='color: #2d6a4f; margin-top:0;'>🏆 {res['性格類型']}</h2><p>{res['特徴']}</p></div>", unsafe_allow_html=True)
         st.markdown("<div class='res-card'>", unsafe_allow_html=True)
-        # タブの順序を変更：成長へ向けてを一番左へ
         t3, t1, t2 = st.tabs(["🌱 成長へ向けて", "💼 適職", "❤️ 恋愛"])
         t3.write(res['成長へ向けて']); t1.write(res['適職']); t2.write(res['恋愛のアドバイス'])
         st.markdown("</div>", unsafe_allow_html=True)
@@ -211,6 +213,6 @@ if st.session_state.diagnosis:
             st.table(pd.DataFrame(res["raw_samples"]))
     st.markdown("</div>", unsafe_allow_html=True)
 
-    if st.button("🔄 新しい文章を解析する"):
+    if st.button("🔄 新しい文章を解析する", key="reset_btn"):
         st.session_state.diagnosis = None
         st.rerun()
