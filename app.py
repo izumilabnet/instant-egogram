@@ -189,7 +189,22 @@ else:
     
     with col1:
         st.markdown("<div class='res-card'>", unsafe_allow_html=True)
-        st.subheader("📊 心理特性プロファイル")
+        # ヘッダーと読み上げボタンのレイアウト
+        head_col1, head_col2 = st.columns([4, 1])
+        with head_col1:
+            st.subheader("📊 心理特性プロファイル")
+        with head_col2:
+            speech_text = f"診断結果は、{res['性格類型']}です。特徴。{res['特徴']}。成長へ向けて。{res['成長へ向けて']}。適職。{res['適職']}。恋愛のアドバイス。{res['恋愛のアドバイス']}"
+            if st.button("🔊", help="結果を読み上げる"):
+                st.markdown(f"""
+                    <script>
+                    var msg = new SpeechSynthesisUtterance();
+                    msg.text = "{speech_text.replace('"', '”').replace('\\n', ' ')}";
+                    msg.lang = 'ja-JP';
+                    window.speechSynthesis.speak(msg);
+                    </script>
+                """, unsafe_allow_html=True)
+
         df = pd.DataFrame(list(res["scores"].items()), columns=['項目', '値'])
         fig = go.Figure()
         fig.add_trace(go.Bar(x=df['項目'], y=df['値'], marker_color='rgba(82, 183, 136, 0.3)', marker_line_color='#2d6a4f', marker_line_width=2))
