@@ -110,7 +110,7 @@ def get_single_analysis(text, gender, age, client):
         "特徴": "...", 
         "適職": "...", 
         "恋愛のアドバイス": "...",
-        "成長へ向けて": "今のエゴグラムが人生で積み上げた大切な個性であることを肯定する文章から始め、無理なく成長するための方向性を150字程度で具体的に記述してください"
+        "成長へ向けて": "今のエゴグラムが人生で積み上げた大切な個性であることを肯定する文章から始め、無理なく成長するための方向性を250字程度で具体的に記述してください"
     }}
     """
     try:
@@ -146,7 +146,9 @@ def run_full_diagnosis(text, gender, age):
         modes = statistics.multimode(vals)
         mode_val = statistics.mean(modes)
         final_scores[key] = round(mode_val, 2)
-        count_in_range = sum(1 for v in vals if (mode_val - 1) <= v <= (mode_val + 1))
+        
+        median_val = statistics.median(vals)
+        count_in_range = sum(1 for v in vals if (median_val - 1) <= v <= (median_val + 1))
         confidences[key] = (count_in_range / ANALYSIS_TRIALS) * 100
 
     base_res = all_results[0]
@@ -154,7 +156,8 @@ def run_full_diagnosis(text, gender, age):
         "scores": final_scores, "confidences": confidences, "raw_samples": raw_scores_list,
         "性格類型": base_res.get("性格類型", ""), "特徴": base_res.get("特徴", ""),
         "適職": base_res.get("適職", ""), "恋愛のアドバイス": base_res.get("恋愛のアドバイス", ""),
-        "成長へ向けて": base_res.get("成長へ向けて", "")
+        "成長へ向けて": base_res.get("成長へ向けて", ""),
+        "original_text": text
     }
 
 # --- 4. メイン画面（認証後） ---
@@ -201,7 +204,7 @@ else:
     st.markdown("<div class='res-card'>", unsafe_allow_html=True)
     c1, c2 = st.columns([1, 1.5])
     with c1:
-        st.markdown("#### 🎯 解析確信度 (最頻値±1の含有率)")
+        st.markdown("#### 🎯 解析信頼度 (中央値±1の含有率)")
         if ANALYSIS_TRIALS > 1:
             for key, conf in res["confidences"].items():
                 st.write(f"**{key}**: {conf:.0f}% Match")
@@ -211,6 +214,11 @@ else:
     with c2:
         with st.expander("🔍 生データ（Raw Sampling Data）"):
             st.table(pd.DataFrame(res["raw_samples"]))
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("<div class='res-card'>", unsafe_allow_html=True)
+    st.subheader("📝 解析対象の原文")
+    st.write(res.get("original_text", ""))
     st.markdown("</div>", unsafe_allow_html=True)
 
     if st.button("🔄 新しい文章を解析する", key="reset_btn"):
