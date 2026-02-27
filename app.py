@@ -41,7 +41,6 @@ if not st.session_state.auth:
     col_top_1, col_top_2, col_top_3 = st.columns([1, 2, 1])
     
     with col_top_2:
-        # プライバシーポリシー
         st.markdown("""
             <div class='privacy-box'>
                 <p style='color: #1e3a8a; font-weight: bold; margin-bottom: 5px;'>🛡️ プライバシーへの配慮</p>
@@ -49,7 +48,6 @@ if not st.session_state.auth:
             </div>
         """, unsafe_allow_html=True)
 
-        # 機能リスト
         st.markdown("""
             <div class='feature-box'>
                 <div style='display: flex; justify-content: space-around; font-size: 0.85rem; color: #6d28d9;'>
@@ -59,7 +57,6 @@ if not st.session_state.auth:
             </div>
         """, unsafe_allow_html=True)
 
-        # アクセスセクション
         st.markdown("<p style='text-align: center; color: #6b7280; font-size: 0.7rem; font-weight: bold; margin-bottom: 0;'>PRIVATE ACCESS</p>", unsafe_allow_html=True)
         pw = st.text_input("", type="password", placeholder="パスワードを入力してください")
         if st.button("分析を開始する"):
@@ -69,7 +66,6 @@ if not st.session_state.auth:
             else:
                 st.error("パスワードが正しくありません")
 
-        # 使用マニュアル（プルダウン）
         with st.expander("📘 使用マニュアルを表示"):
             st.markdown("""
                 <div style='font-size: 0.85rem; color: #374151;'>
@@ -107,13 +103,14 @@ def get_single_analysis(text, gender, age, client):
     prompt_content = f"""
     属性: {age}、{gender}。対象文章: '{text}'
     エゴグラム(CP,NP,A,FC,AC)を-10〜10で算出し性格診断せよ。
-    必ずJSON形式のみで回答: {{
+    必ずJSON形式のみで回答し、余計な指示文を含めないこと。
+    回答構成: {{
         "scores": {{"CP":0, "NP":0, "A":0, "FC":0, "AC":0}}, 
         "性格類型": "...", 
         "特徴": "...", 
         "適職": "...", 
         "恋愛のアドバイス": "...",
-        "成長へ向けて": "今のこのエゴグラムがこれまでの人生で積み上げてきた大切な個性であることを肯定した上で、無理なく成長するための方向性を150字程度で"
+        "成長へ向けて": "今のエゴグラムが人生で積み上げた大切な個性であることを肯定する文章から始め、無理なく成長するための方向性を150字程度で具体的に記述してください"
     }}
     """
     try:
@@ -161,7 +158,6 @@ def run_full_diagnosis(text, gender, age):
     }
 
 st.markdown("<h1 class='main-title'>INSTANT EGOGRAM PRO</h1>", unsafe_allow_html=True)
-st.caption(f"Mint-Green Edition | Trials: {ANALYSIS_TRIALS}")
 
 with st.sidebar:
     gender = st.selectbox("性別", ["男性", "女性", "その他"], index=1)
@@ -195,8 +191,9 @@ if st.session_state.diagnosis:
     with col2:
         st.markdown(f"<div class='res-card'><h2 style='color: #2d6a4f; margin-top:0;'>🏆 {res['性格類型']}</h2><p>{res['特徴']}</p></div>", unsafe_allow_html=True)
         st.markdown("<div class='res-card'>", unsafe_allow_html=True)
-        t1, t2, t3 = st.tabs(["💼 適職", "❤️ 恋愛", "🌱 成長へ向けて"])
-        t1.write(res['適職']); t2.write(res['恋愛のアドバイス']); t3.write(res['成長へ向けて'])
+        # タブの順序を変更：成長へ向けてを一番左へ
+        t3, t1, t2 = st.tabs(["🌱 成長へ向けて", "💼 適職", "❤️ 恋愛"])
+        t3.write(res['成長へ向けて']); t1.write(res['適職']); t2.write(res['恋愛のアドバイス'])
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='res-card'>", unsafe_allow_html=True)
@@ -212,7 +209,6 @@ if st.session_state.diagnosis:
     with c2:
         with st.expander("🔍 生データ（Raw Sampling Data）"):
             st.table(pd.DataFrame(res["raw_samples"]))
-            st.caption("※これらの数値の『最頻値』を最終スコアとして採用しています。")
     st.markdown("</div>", unsafe_allow_html=True)
 
     if st.button("🔄 新しい文章を解析する"):
