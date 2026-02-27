@@ -27,6 +27,13 @@ st.markdown("""
     div.stButton > button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(82, 183, 136, 0.4); }
     section[data-testid="stSidebar"] { background-color: #e8f5f1; }
     .footer { text-align: center; color: #9ca3af; font-size: 0.8rem; margin-top: 2rem; }
+
+    /* 印刷用設定 */
+    @media print {
+        section[data-testid="stSidebar"], .stButton, header, footer, .footer { display: none !important; }
+        .stApp { background-color: white !important; }
+        .res-card { border: 1px solid #eee !important; box-shadow: none !important; break-inside: avoid; }
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -153,7 +160,8 @@ def run_full_diagnosis(text, gender, age):
         "scores": final_scores, "confidences": confidences, "raw_samples": raw_scores_list,
         "性格類型": base_res.get("性格類型", ""), "特徴": base_res.get("特徴", ""),
         "適職": base_res.get("適職", ""), "恋愛のアドバイス": base_res.get("恋愛のアドバイス", ""),
-        "成長へ向けて": base_res.get("成長へ向けて", "")
+        "成長へ向けて": base_res.get("成長へ向けて", ""),
+        "input_text": text
     }
 
 # --- 4. メイン画面（認証後） ---
@@ -210,6 +218,12 @@ else:
     with c2:
         with st.expander("🔍 生データ（Raw Sampling Data）"):
             st.table(pd.DataFrame(res["raw_samples"]))
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # 入力内容の表示セクション
+    st.markdown("<div class='res-card'>", unsafe_allow_html=True)
+    st.markdown("#### 📝 解析対象データ")
+    st.info(res.get("input_text", "データがありません"))
     st.markdown("</div>", unsafe_allow_html=True)
 
     if st.button("🔄 新しい文章を解析する", key="reset_btn"):
