@@ -58,7 +58,7 @@ if not st.session_state.auth:
         """, unsafe_allow_html=True)
 
         st.markdown("<p style='text-align: center; color: #6b7280; font-size: 0.7rem; font-weight: bold; margin-bottom: 0;'>PRIVATE ACCESS</p>", unsafe_allow_html=True)
-        pw = st.text_input("", type="password", placeholder="パスワードを入力してください", key="login_pw")
+        pw = st.text_input("Password", type="password", placeholder="パスワードを入力してください", key="login_pw", label_visibility="collapsed")
         if st.button("分析を開始する", key="login_btn"):
             if pw == "okok":
                 st.session_state.auth = True
@@ -97,7 +97,7 @@ if not st.session_state.auth:
         """, unsafe_allow_html=True)
     st.stop()
 
-# --- 3. 分析ロジック ---
+# --- 3. 分析エンジン ---
 def get_single_analysis(text, gender, age, client):
     model_id = "gemini-2.5-flash" 
     prompt_content = f"""
@@ -157,7 +157,7 @@ def run_full_diagnosis(text, gender, age):
         "成長へ向けて": base_res.get("成長へ向けて", "")
     }
 
-# --- 4. メインコンテンツ ---
+# --- 4. メイン画面（認証後） ---
 st.markdown("<h1 class='main-title'>INSTANT EGOGRAM PRO</h1>", unsafe_allow_html=True)
 
 if st.session_state.diagnosis is None:
@@ -166,7 +166,7 @@ if st.session_state.diagnosis is None:
         age = st.selectbox("年齢", ["", "10代", "20代", "30代", "40代", "50代", "60代", "70代以上"], index=0)
         st.info("独立推論の結果から『最頻値』を特定し、その集中度を信頼度として算出します。")
 
-    input_text = st.text_area("解析文章を入力", height=200, key="main_input")
+    input_text = st.text_area("Analysis Text", height=200, key="main_input", label_visibility="collapsed")
 
     if st.button("🚀 診断プロファイルを開始", key="diag_btn"):
         if input_text:
