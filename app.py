@@ -118,12 +118,19 @@ def get_single_analysis(text, gender, age, client):
             model=model_id, contents=prompt_content,
             config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.2)
         )
-        return json.loads(re.search(r'(\{.*\})', response.text.strip(), re.DOTALL).group(1))
-    except: return None
+        json_match = re.search(r'(\{.*\})', response.text.strip(), re.DOTALL)
+        if json_match:
+            return json.loads(json_match.group(1))
+        return None
+    except Exception as e:
+        st.error(f"APIエラーが発生しました: {e}")
+        return None
 
 def run_full_diagnosis(text, gender, age):
     api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key: return None
+    if not api_key:
+        st.error("APIキーが設定されていません。Renderの環境変数を確認してください。")
+        return None
     client = genai.Client(api_key=api_key)
     all_results = []
     my_bar = st.progress(0, text="Analyzing psychological vectors...")
@@ -143,11 +150,16 @@ def run_full_diagnosis(text, gender, age):
     
     for key in ["CP", "NP", "A", "FC", "AC"]:
         vals = [int(round(float(s.get(key, 0)))) for s in raw_scores_list]
-        modes = statistics.multimode(vals)
-        mode_val = statistics.mean(modes)
+        # 1件のみでも動作するように修正
+        if len(vals) == 1:
+            mode_val = vals[0]
+            median_val = vals[0]
+        else:
+            modes = statistics.multimode(vals)
+            mode_val = statistics.mean(modes)
+            median_val = statistics.median(vals)
+            
         final_scores[key] = round(mode_val, 2)
-        
-        median_val = statistics.median(vals)
         count_in_range = sum(1 for v in vals if (median_val - 1) <= v <= (median_val + 1))
         confidences[key] = (count_in_range / ANALYSIS_TRIALS) * 100
 
@@ -172,11 +184,13 @@ if st.session_state.diagnosis is None:
     input_text = st.text_area("Analysis Text", height=200, key="main_input", label_visibility="collapsed")
 
     if st.button("🚀 診断プロファイルを開始", key="diag_btn"):
-        if input_text:
+        if input_text.strip():
             result = run_full_diagnosis(input_text, gender, age)
             if result:
                 st.session_state.diagnosis = result
                 st.rerun()
+            else:
+                st.error("診断結果の生成に失敗しました。")
         else:
             st.warning("文章を入力してください。")
 else:
