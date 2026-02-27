@@ -10,41 +10,38 @@ import statistics
 import time
 
 # --- 0. 解析回数設定（開発時:1 / 運用時:5） ---
-ANALYSIS_TRIALS = 5 
+ANALYSIS_TRIALS = 3 
 
-# --- 1. ページ設定とスタイル ---
+# --- 1. ページ設定とスタイル（ミントグリーン基調） ---
 st.set_page_config(page_title="INSTANT EGOGRAM PRO", layout="wide")
 
 st.markdown("""
     <style>
     /* 全体背景 */
     .stApp {
-        background-color: #0d1117;
-        color: #c9d1d9;
+        background-color: #f0f9f6;
+        color: #2c3e50;
     }
     /* メインタイトル */
     .main-title {
         font-size: 2.5rem;
         font-weight: 800;
-        letter-spacing: -0.05em;
-        background: linear-gradient(90deg, #58a6ff, #ff7b72);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        color: #2d6a4f;
         margin-bottom: 0.5rem;
     }
     /* カード装飾 */
     .res-card {
-        background: #161b22;
+        background: #ffffff;
         padding: 1.5rem;
         border-radius: 12px;
-        border: 1px solid #30363d;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        border: 1px solid #d8e2dc;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         margin-bottom: 1rem;
     }
     /* ボタンのカスタマイズ */
     div.stButton > button {
         width: 100%;
-        background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
+        background: linear-gradient(135deg, #52b788 0%, #40916c 100%);
         color: white;
         border: none;
         padding: 0.75rem;
@@ -54,16 +51,11 @@ st.markdown("""
     }
     div.stButton > button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(46, 160, 67, 0.4);
+        box-shadow: 0 4px 12px rgba(82, 183, 136, 0.4);
     }
     /* サイドバー背景 */
     section[data-testid="stSidebar"] {
-        background-color: #010409;
-    }
-    /* 生データ表示エリア */
-    .raw-data-area {
-        font-family: 'Courier New', monospace;
-        font-size: 0.85rem;
+        background-color: #e8f5f1;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -82,7 +74,7 @@ if not st.session_state.auth:
             st.rerun()
     st.stop()
 
-# --- 4. 解析エンジン (独立サンプリング方式) ---
+# --- 4. 分析エンジン (独立サンプリング方式) ---
 def get_single_analysis(text, gender, age, client):
     model_id = "gemini-2.5-flash" 
     prompt_content = f"""
@@ -109,7 +101,7 @@ def run_full_diagnosis(text, gender, age):
     client = genai.Client(api_key=api_key)
     
     all_results = []
-    progress_text = "Analyzing deep psychology..."
+    progress_text = "Analyzing psychological vectors..."
     my_bar = st.progress(0, text=progress_text)
     
     for i in range(ANALYSIS_TRIALS):
@@ -128,11 +120,14 @@ def run_full_diagnosis(text, gender, age):
     
     for key in ["CP", "NP", "A", "FC", "AC"]:
         vals = [int(round(float(s.get(key, 0)))) for s in raw_scores_list]
-        modes = statistics.multimode(vals)
-        mode_val = statistics.mean(modes)
-        final_scores[key] = round(mode_val, 2)
-        count_mode = vals.count(int(round(mode_val)))
-        confidences[key] = (count_mode / ANALYSIS_TRIALS) * 100
+        
+        # 中央値を算出
+        median_val = statistics.median(vals)
+        final_scores[key] = round(median_val, 2)
+        
+        # 信頼度計算: 中央値±1の範囲に入るデータの割合
+        count_in_range = sum(1 for v in vals if (median_val - 1) <= v <= (median_val + 1))
+        confidences[key] = (count_in_range / ANALYSIS_TRIALS) * 100
 
     base_res = all_results[0]
     return {
@@ -147,16 +142,16 @@ def run_full_diagnosis(text, gender, age):
 
 # --- 5. UIレイアウト ---
 st.markdown("<h1 class='main-title'>INSTANT EGOGRAM PRO</h1>", unsafe_allow_html=True)
-st.caption(f"Precision Analysis Engine | Trials: {ANALYSIS_TRIALS}")
+st.caption(f"Mint-Green Edition | Precision Trials: {ANALYSIS_TRIALS}")
 
 with st.sidebar:
     st.markdown("### 👤 User Profile")
     gender = st.selectbox("性別", ["男性", "女性", "その他"], index=1)
     age = st.selectbox("年齢", ["10代", "20代", "30代", "40代", "50代", "60代", "70代以上"], index=2)
     st.divider()
-    st.info("このAI診断は文章のトーンから深層心理の『揺らぎ』を統計的に算出します。")
+    st.info("独立した複数回のAI推論により、解釈の『中央値』を真値として特定します。")
 
-input_text = st.text_area("解析文章を入力（SNS、自己紹介、セリフなど）", height=220, placeholder="ここに文章を入力してください...")
+input_text = st.text_area("解析文章を入力", height=200, placeholder="ここに文章を入力してください...")
 
 if st.button("🚀 診断プロファイルを開始"):
     if input_text:
@@ -179,15 +174,13 @@ if st.session_state.diagnosis:
         
         df = pd.DataFrame(list(res["scores"].items()), columns=['項目', '値'])
         fig = go.Figure()
-        # 棒グラフ
         fig.add_trace(go.Bar(
             x=df['項目'], y=df['値'],
-            marker_color='rgba(88, 166, 255, 0.3)',
-            marker_line_color='#58a6ff',
+            marker_color='rgba(82, 183, 136, 0.3)',
+            marker_line_color='#2d6a4f',
             marker_line_width=2,
             name='Score'
         ))
-        # 折れ線
         fig.add_trace(go.Scatter(
             x=df['項目'], y=df['値'],
             mode='lines+markers',
@@ -198,9 +191,9 @@ if st.session_state.diagnosis:
         fig.update_layout(
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)',
-            font=dict(color="#c9d1d9"),
-            yaxis=dict(range=[-10.5, 10.5], zeroline=True, zerolinecolor='#30363d', gridcolor='#30363d'),
-            xaxis=dict(gridcolor='#30363d'),
+            font=dict(color="#2c3e50"),
+            yaxis=dict(range=[-10.5, 10.5], zeroline=True, zerolinecolor='#d8e2dc', gridcolor='#f0f0f0'),
+            xaxis=dict(gridcolor='#f0f0f0'),
             height=400, margin=dict(l=0, r=0, t=20, b=0),
             showlegend=False
         )
@@ -210,35 +203,30 @@ if st.session_state.diagnosis:
     with col2:
         st.markdown(f"""
             <div class='res-card'>
-                <h2 style='color: #ff7b72; margin-top:0;'>🏆 {res['性格類型']}</h2>
+                <h2 style='color: #2d6a4f; margin-top:0;'>🏆 {res['性格類型']}</h2>
                 <p style='font-size: 0.95rem; line-height: 1.6;'>{res['特徴']}</p>
             </div>
         """, unsafe_allow_html=True)
         
-        with st.container():
-            st.markdown("<div class='res-card'>", unsafe_allow_html=True)
-            t1, t2 = st.tabs(["💼 適職", "❤️ 恋愛"])
-            t1.write(res['適職'])
-            t2.write(res['恋愛のアドバイス'])
-            st.markdown("</div>", unsafe_allow_html=True)
-
-    # 信頼性と生データの表示（デザインを統一）
-    st.markdown("<div class='res-card'>", unsafe_allow_html=True)
-    c1, c2 = st.columns([1, 1.5])
-    with c1:
-        st.markdown("#### 🎯 解析確信度")
-        if ANALYSIS_TRIALS > 1:
-            for key, conf in res["confidences"].items():
-                st.write(f"{key}: {conf:.0f}%")
-                st.progress(conf / 100)
-        else:
-            st.caption("※現在シングル試行モードのため、確信度は100%と表示されます。")
-    
-    with c2:
-        st.markdown("#### 🔍 原数値（Raw Data）")
-        st.markdown("<div class='raw-data-area'>", unsafe_allow_html=True)
-        st.table(pd.DataFrame(res["raw_samples"]))
+        st.markdown("<div class='res-card'>", unsafe_allow_html=True)
+        t1, t2 = st.tabs(["💼 適職", "❤️ 恋愛"])
+        t1.write(res['適職'])
+        t2.write(res['恋愛のアドバイス'])
         st.markdown("</div>", unsafe_allow_html=True)
+
+    # 信頼性と生データ
+    st.markdown("<div class='res-card'>", unsafe_allow_html=True)
+    st.markdown("#### 🎯 解析確信度 (中央値±1の含有率)")
+    if ANALYSIS_TRIALS > 1:
+        cols = st.columns(5)
+        for i, (key, conf) in enumerate(res["confidences"].items()):
+            cols[i].metric(key, f"{res['scores'][key]}", f"{conf:.0f}% Match")
+    else:
+        st.caption("※シングル試行モードのため、確信度は一律100%表示となります。")
+    
+    with st.expander("🔍 生データ（Raw Sampling Data）を確認する"):
+        st.table(pd.DataFrame(res["raw_samples"]))
+        st.caption("※独立した5回の推論結果を表示しています。これらの数値の『中央値』を最終スコアとして採用しています。")
     st.markdown("</div>", unsafe_allow_html=True)
 
     if st.button("🔄 新しい文章を解析する"):
