@@ -10,7 +10,7 @@ import statistics
 import time
 
 # --- 0. 解析回数設定（開発時:1 / 運用時:5） ---
-ANALYSIS_TRIALS = 1 
+ANALYSIS_TRIALS = 5 
 
 # --- 1. ページ設定とスタイル ---
 st.set_page_config(page_title="INSTANT EGOGRAM PRO", layout="wide")
