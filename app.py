@@ -18,26 +18,90 @@ st.set_page_config(page_title="INSTANT EGOGRAM PRO", layout="wide")
 st.markdown("""
     <style>
     .stApp { background-color: #f0f9f6; color: #2c3e50; }
-    .main-title { font-size: 2.5rem; font-weight: 800; color: #2d6a4f; margin-bottom: 0.5rem; }
+    .main-title { font-size: 2.5rem; font-weight: 800; color: #2d6a4f; margin-bottom: 0.5rem; text-align: center; }
+    .main-subtitle { font-size: 1rem; color: #6d28d9; text-align: center; margin-bottom: 2rem; }
     .res-card { background: #ffffff; padding: 1.5rem; border-radius: 12px; border: 1px solid #d8e2dc; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 1rem; }
+    .privacy-box { background-color: #eff6ff; border: 1px solid #bfdbfe; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
+    .feature-box { background-color: #ffffff; border: 1px solid #e5e7eb; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
     div.stButton > button { width: 100%; background: linear-gradient(135deg, #52b788 0%, #40916c 100%); color: white; border: none; padding: 0.75rem; font-weight: bold; border-radius: 8px; transition: 0.3s; }
     div.stButton > button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(82, 183, 136, 0.4); }
     section[data-testid="stSidebar"] { background-color: #e8f5f1; }
+    .footer { text-align: center; color: #9ca3af; font-size: 0.8rem; margin-top: 2rem; }
     </style>
     """, unsafe_allow_html=True)
 
 if 'auth' not in st.session_state: st.session_state.auth = False
 if 'diagnosis' not in st.session_state: st.session_state.diagnosis = None
 
+# --- 2. トップページ（認証前） ---
 if not st.session_state.auth:
-    st.markdown("<h1 class='main-title'>INSTANT EGOGRAM</h1>", unsafe_allow_html=True)
-    pw = st.text_input("Access Password", type="password")
-    if st.button("Authenticate"):
-        if pw == "okok":
-            st.session_state.auth = True
-            st.rerun()
+    st.markdown("<h1 class='main-title'>心理ゲーム・アナライザ</h1>", unsafe_allow_html=True)
+    st.markdown("<p class='main-subtitle'>〜 交流分析理論に基づく深層心理の解明 〜</p>", unsafe_allow_html=True)
+
+    col_top_1, col_top_2, col_top_3 = st.columns([1, 2, 1])
+    
+    with col_top_2:
+        # プライバシーポリシー
+        st.markdown("""
+            <div class='privacy-box'>
+                <p style='color: #1e3a8a; font-weight: bold; margin-bottom: 5px;'>🛡️ プライバシーへの配慮</p>
+                <p style='font-size: 0.85rem; margin: 0;'>本アプリでは、<b>氏名・メールアドレス等の個人情報の入力は一切不要</b>です。入力データも解析終了後に破棄され、サーバーに残ることはありません。</p>
+            </div>
+        """, unsafe_allow_html=True)
+
+        # 機能リスト
+        st.markdown("""
+            <div class='feature-box'>
+                <div style='display: flex; justify-content: space-around; font-size: 0.85rem; color: #6d28d9;'>
+                    <div>✓ ゲームの特定<br>✓ OK牧場の変遷<br>✓ 具体的な対応策</div>
+                    <div>✓ 無意識の利得<br>✓ 残酷な結末予測<br>✓ 心の処方箋</div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+        # アクセスセクション
+        st.markdown("<p style='text-align: center; color: #6b7280; font-size: 0.7rem; font-weight: bold; margin-bottom: 0;'>PRIVATE ACCESS</p>", unsafe_allow_html=True)
+        pw = st.text_input("", type="password", placeholder="パスワードを入力してください")
+        if st.button("分析を開始する"):
+            if pw == "okok":
+                st.session_state.auth = True
+                st.rerun()
+            else:
+                st.error("パスワードが正しくありません")
+
+        # 使用マニュアル（プルダウン）
+        with st.expander("📘 使用マニュアルを表示"):
+            st.markdown("""
+                <div style='font-size: 0.85rem; color: #374151;'>
+                    <p style='color: #1e3a8a; font-weight: bold; margin-top: 10px;'>■ アプリの概要</p>
+                    <ul><li>Eric Berne氏の“交流分析”に基づき、AIが対人関係の心理パターンを自動分析します。</li></ul>
+                    <p style='color: #1e3a8a; font-weight: bold;'>■ 使い方</p>
+                    <ul>
+                        <li>ログイン：パスワードを入力して分析画面へ。</li>
+                        <li>属性選択：対象の性別と年齢を選択。</li>
+                        <li>内容入力：文章を具体的（100〜300字）に入力。</li>
+                        <li>分析実行：ボタン押下後、スキャンが開始されます。</li>
+                    </ul>
+                    <p style='color: #b91c1c; font-weight: bold;'>■ ⚠️ 注意事項</p>
+                    <ul>
+                        <li>データ：個人を特定する情報の入力は控えてください。</li>
+                        <li>免責：本ツールは気づきのためのもので、医学的診断ではありません。</li>
+                    </ul>
+                </div>
+            """, unsafe_allow_html=True)
+
+        st.divider()
+        st.markdown("""
+            <div class='footer'>
+                <p style='color: #1e3a8a; font-weight: bold; font-size: 0.75rem; margin-bottom: 5px;'>免責事項</p>
+                <p style='font-size: 0.7rem;'>AIによる分析は気づきを支援するもので、医学的診断や治療を代替しません。本ツールの利用により生じたいかなる結果についても運営者は責任を負いません。</p>
+                © 2026 PsychoGameAnalyzers（代表：和泉光則）<br>
+                Based on Eric Berne’s Transactional Analysis
+            </div>
+        """, unsafe_allow_html=True)
     st.stop()
 
+# --- 3. 分析機能（認証後） ---
 def get_single_analysis(text, gender, age, client):
     model_id = "gemini-2.5-flash" 
     prompt_content = f"""
@@ -82,23 +146,17 @@ def run_full_diagnosis(text, gender, age):
     
     for key in ["CP", "NP", "A", "FC", "AC"]:
         vals = [int(round(float(s.get(key, 0)))) for s in raw_scores_list]
-        # 最頻値を算出
         modes = statistics.multimode(vals)
         mode_val = statistics.mean(modes)
         final_scores[key] = round(mode_val, 2)
-        # 信頼度計算: 最頻値（に近い値）±1の含有率
         count_in_range = sum(1 for v in vals if (mode_val - 1) <= v <= (mode_val + 1))
         confidences[key] = (count_in_range / ANALYSIS_TRIALS) * 100
 
     base_res = all_results[0]
     return {
-        "scores": final_scores,
-        "confidences": confidences,
-        "raw_samples": raw_scores_list,
-        "性格類型": base_res.get("性格類型", ""),
-        "特徴": base_res.get("特徴", ""),
-        "適職": base_res.get("適職", ""),
-        "恋愛のアドバイス": base_res.get("恋愛のアドバイス", ""),
+        "scores": final_scores, "confidences": confidences, "raw_samples": raw_scores_list,
+        "性格類型": base_res.get("性格類型", ""), "特徴": base_res.get("特徴", ""),
+        "適職": base_res.get("適職", ""), "恋愛のアドバイス": base_res.get("恋愛のアドバイス", ""),
         "成長へ向けて": base_res.get("成長へ向けて", "")
     }
 
