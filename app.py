@@ -26,7 +26,7 @@ if not st.session_state.auth:
             st.rerun()
     st.stop()
 
-# --- 3. 分析エンジン (構造化出力を強化) ---
+# --- 3. 分析エンジン (JSON生成をより厳格に制御) ---
 def get_batch_analysis(text, gender, age):
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key: return None
@@ -36,30 +36,26 @@ def get_batch_analysis(text, gender, age):
         
         prompt_content = f"""
         属性: {age}、{gender}。
-        以下の文章から、書き手のエゴグラム（CP, NP, A, FC, AC）を推論し、性格診断を行ってください。
+        対象文章: '{text}'
         
-        【重要：出力形式】
-        必ず以下のJSON構造のみを返してください。
+        【指示】
+        この文章をエゴグラム理論で5回独立してプロファイリングし、以下のJSON形式で出力せよ。
+        各項目のスコアは必ず -10 から 10 の数値とすること。
+        
+        【JSONフォーマット例】
         {{
           "sampling_data": [
-            {{"CP": 0, "NP": 0, "A": 0, "FC": 0, "AC": 0}},
-            {{"CP": 0, "NP": 0, "A": 0, "FC": 0, "AC": 0}},
-            {{"CP": 0, "NP": 0, "A": 0, "FC": 0, "AC": 0}},
-            {{"CP": 0, "NP": 0, "A": 0, "FC": 0, "AC": 0}},
-            {{"CP": 0, "NP": 0, "A": 0, "FC": 0, "AC": 0}}
+            {{"CP": 5, "NP": 3, "A": 0, "FC": -2, "AC": 4}},
+            {{"CP": 6, "NP": 2, "A": 1, "FC": -3, "AC": 5}},
+            {{"CP": 4, "NP": 4, "A": -1, "FC": -1, "AC": 3}},
+            {{"CP": 5, "NP": 3, "A": 0, "FC": -2, "AC": 4}},
+            {{"CP": 6, "NP": 2, "A": 1, "FC": -3, "AC": 5}}
           ],
-          "性格類型": "...",
-          "特徴": "...",
-          "適職": "...",
-          "恋愛のアドバイス": "..."
+          "性格類型": "短いキャッチコピー",
+          "特徴": "200字程度の解説",
+          "適職": "仕事の例（箇書き）",
+          "恋愛のアドバイス": "具体的なポイント"
         }}
-        
-        【精密解析ルール】
-        1. 内部で5回プロファイリングし、その全スコア（各-10〜10）を「sampling_data」に入れてください。
-        2. マイナス値は「反転したエネルギー（例：NPなら冷徹、ACなら反抗心）」として解釈すること。
-        
-        【対象文章】
-        '{text}'
         """
 
         response = client.models.generate_content(
@@ -71,7 +67,9 @@ def get_batch_analysis(text, gender, age):
             )
         )
         
-        raw_data = json.loads(re.search(r'(\{.*\})', response.text.strip(), re.DOTALL).group(1))
+        match = re.search(r'(\{.*\})', response.text.strip(), re.DOTALL)
+        if not match: return None
+        raw_data = json.loads(match.group(1))
         
         samples = raw_data.get("sampling_data", [])
         if not samples or len(samples) < 1: return None
@@ -93,26 +91,26 @@ def get_batch_analysis(text, gender, age):
         return None
 
 # --- 4. 画面レイアウト ---
-st.title("⚡ インスタント・エゴグラム (高密度サンプリング版)")
-st.caption("1回の通信で5層の心理プロファイリングを行い、統計的平均から個性を可視化します。")
+st.title("⚡ インスタント・エゴグラム (精密安定版)")
+st.caption("AI内部の5層サンプリングを統合し、統計的根拠のある診断を提供します。")
 
 st.sidebar.title("👤 プロフィール設定")
-gender = st.sidebar.selectbox("対象の性別", ["男性", "女性", "その他", "回答しない"], index=None, placeholder="選択してください")
+gender = st.sidebar.selectbox("対象の性別", ["男性", "女性", "その他", "回答しない"], index=1)
 age = st.sidebar.selectbox("対象の年齢", ["10代", "20代", "30代", "40代", "50代", "60代", "70代以上"], index=2)
 
 input_text = st.text_area("解析したい文章を入力してください", height=300, placeholder="ここに文章をペーストしてください...")
 
 if st.button("🚀 精密診断を開始する"):
     if input_text:
-        with st.spinner("AIが5層の心理データを一括展開中..."):
-            result = get_batch_analysis(input_text, gender if gender else "未指定", age)
+        with st.spinner("5層の深層心理データを統合解析中..."):
+            result = get_batch_analysis(input_text, gender, age)
             if result and "scores" in result:
                 st.session_state.diagnosis = result
                 st.session_state.scores = result["scores"]
                 st.session_state.raw_samples = result["raw_samples"]
                 st.rerun()
             else:
-                st.error("解析に失敗しました。文章を少し変えるか、もう一度お試しください。")
+                st.error("現在、解析に失敗しました。もう一度お試しください。")
     else:
         st.warning("文章を入力してください。")
 
@@ -142,7 +140,7 @@ if st.session_state.diagnosis:
             sample_df = pd.DataFrame(st.session_state.raw_samples)
             sample_df.index = [f"試行 {i+1}" for i in range(len(sample_df))]
             st.table(sample_df)
-            st.caption("※これら5つの推論結果を統計的に統合しています。")
+            st.caption("※これらの推論結果の平均値をグラフ化しています。")
 
     if st.button("🔄 新しい診断を行う"):
         st.session_state.diagnosis = None
