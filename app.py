@@ -110,7 +110,7 @@ def get_single_analysis(text, gender, age, client):
         "特徴": "...", 
         "適職": "...", 
         "恋愛のアドバイス": "...",
-        "成長へ向けて": "今のエゴグラムが人生で積み上げた大切な個性であることを肯定する文章から始め、無理なく成長するための方向性を250字程度で具体的に記述してください"
+        "成長へ向けて": "今のエゴグラムが人生で積み上げた大切な個性であることを肯定する文章から始め、無理なく成長するための方向性を150字程度で具体的に記述してください"
     }}
     """
     try:
@@ -118,19 +118,12 @@ def get_single_analysis(text, gender, age, client):
             model=model_id, contents=prompt_content,
             config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.2)
         )
-        json_match = re.search(r'(\{.*\})', response.text.strip(), re.DOTALL)
-        if json_match:
-            return json.loads(json_match.group(1))
-        return None
-    except Exception as e:
-        st.error(f"APIエラーが発生しました: {e}")
-        return None
+        return json.loads(re.search(r'(\{.*\})', response.text.strip(), re.DOTALL).group(1))
+    except: return None
 
 def run_full_diagnosis(text, gender, age):
     api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        st.error("APIキーが設定されていません。Renderの環境変数を確認してください。")
-        return None
+    if not api_key: return None
     client = genai.Client(api_key=api_key)
     all_results = []
     my_bar = st.progress(0, text="Analyzing psychological vectors...")
@@ -150,17 +143,10 @@ def run_full_diagnosis(text, gender, age):
     
     for key in ["CP", "NP", "A", "FC", "AC"]:
         vals = [int(round(float(s.get(key, 0)))) for s in raw_scores_list]
-        # 1件のみでも動作するように修正
-        if len(vals) == 1:
-            mode_val = vals[0]
-            median_val = vals[0]
-        else:
-            modes = statistics.multimode(vals)
-            mode_val = statistics.mean(modes)
-            median_val = statistics.median(vals)
-            
+        modes = statistics.multimode(vals)
+        mode_val = statistics.mean(modes)
         final_scores[key] = round(mode_val, 2)
-        count_in_range = sum(1 for v in vals if (median_val - 1) <= v <= (median_val + 1))
+        count_in_range = sum(1 for v in vals if (mode_val - 1) <= v <= (mode_val + 1))
         confidences[key] = (count_in_range / ANALYSIS_TRIALS) * 100
 
     base_res = all_results[0]
@@ -168,8 +154,7 @@ def run_full_diagnosis(text, gender, age):
         "scores": final_scores, "confidences": confidences, "raw_samples": raw_scores_list,
         "性格類型": base_res.get("性格類型", ""), "特徴": base_res.get("特徴", ""),
         "適職": base_res.get("適職", ""), "恋愛のアドバイス": base_res.get("恋愛のアドバイス", ""),
-        "成長へ向けて": base_res.get("成長へ向けて", ""),
-        "original_text": text
+        "成長へ向けて": base_res.get("成長へ向けて", "")
     }
 
 # --- 4. メイン画面（認証後） ---
@@ -184,13 +169,11 @@ if st.session_state.diagnosis is None:
     input_text = st.text_area("Analysis Text", height=200, key="main_input", label_visibility="collapsed")
 
     if st.button("🚀 診断プロファイルを開始", key="diag_btn"):
-        if input_text.strip():
+        if input_text:
             result = run_full_diagnosis(input_text, gender, age)
             if result:
                 st.session_state.diagnosis = result
                 st.rerun()
-            else:
-                st.error("診断結果の生成に失敗しました。")
         else:
             st.warning("文章を入力してください。")
 else:
@@ -218,7 +201,7 @@ else:
     st.markdown("<div class='res-card'>", unsafe_allow_html=True)
     c1, c2 = st.columns([1, 1.5])
     with c1:
-        st.markdown("#### 🎯 解析信頼度 (中央値±1の含有率)")
+        st.markdown("#### 🎯 解析確信度 (最頻値±1の含有率)")
         if ANALYSIS_TRIALS > 1:
             for key, conf in res["confidences"].items():
                 st.write(f"**{key}**: {conf:.0f}% Match")
@@ -228,11 +211,6 @@ else:
     with c2:
         with st.expander("🔍 生データ（Raw Sampling Data）"):
             st.table(pd.DataFrame(res["raw_samples"]))
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown("<div class='res-card'>", unsafe_allow_html=True)
-    st.subheader("📝 解析対象の原文")
-    st.write(res.get("original_text", ""))
     st.markdown("</div>", unsafe_allow_html=True)
 
     if st.button("🔄 新しい文章を解析する", key="reset_btn"):
