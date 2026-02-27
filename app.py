@@ -7,160 +7,240 @@ import json
 import os
 import re
 import statistics
+import time
 
-# --- 1. ページ設定 ---
-st.set_page_config(page_title="インスタント・エゴグラム", layout="wide")
+# --- 0. 解析回数設定（開発時:1 / 運用時:5） ---
+ANALYSIS_TRIALS = 1 
 
+# --- 1. ページ設定とスタイル ---
+st.set_page_config(page_title="INSTANT EGOGRAM PRO", layout="wide")
+
+st.markdown("""
+    <style>
+    /* 全体背景 */
+    .stApp {
+        background-color: #0d1117;
+        color: #c9d1d9;
+    }
+    /* メインタイトル */
+    .main-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        letter-spacing: -0.05em;
+        background: linear-gradient(90deg, #58a6ff, #ff7b72);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.5rem;
+    }
+    /* カード装飾 */
+    .res-card {
+        background: #161b22;
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 1px solid #30363d;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        margin-bottom: 1rem;
+    }
+    /* ボタンのカスタマイズ */
+    div.stButton > button {
+        width: 100%;
+        background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
+        color: white;
+        border: none;
+        padding: 0.75rem;
+        font-weight: bold;
+        border-radius: 8px;
+        transition: 0.3s;
+    }
+    div.stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(46, 160, 67, 0.4);
+    }
+    /* サイドバー背景 */
+    section[data-testid="stSidebar"] {
+        background-color: #010409;
+    }
+    /* 生データ表示エリア */
+    .raw-data-area {
+        font-family: 'Courier New', monospace;
+        font-size: 0.85rem;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# --- 2. 状態管理 ---
 if 'auth' not in st.session_state: st.session_state.auth = False
 if 'diagnosis' not in st.session_state: st.session_state.diagnosis = None
-if 'scores' not in st.session_state: st.session_state.scores = {"CP":0.0, "NP":0.0, "A":0.0, "FC":0.0, "AC":0.0}
-if 'raw_samples' not in st.session_state: st.session_state.raw_samples = []
 
-# --- 2. 認証 ---
+# --- 3. 認証機能 ---
 if not st.session_state.auth:
-    st.title("インスタント・エゴグラム")
-    pw = st.text_input("パスワードを入力してください", type="password")
-    if st.button("ログイン"):
+    st.markdown("<h1 class='main-title'>INSTANT EGOGRAM</h1>", unsafe_allow_html=True)
+    pw = st.text_input("Access Password", type="password")
+    if st.button("Authenticate"):
         if pw == "okok":
             st.session_state.auth = True
             st.rerun()
     st.stop()
 
-# --- 3. 分析エンジン (5回サンプリング・最頻値集計版) ---
-def get_batch_analysis(text, gender, age):
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key: return None
+# --- 4. 解析エンジン (独立サンプリング方式) ---
+def get_single_analysis(text, gender, age, client):
+    model_id = "gemini-2.5-flash" 
+    prompt_content = f"""
+    属性: {age}、{gender}。対象文章: '{text}'
+    エゴグラム(CP,NP,A,FC,AC)を-10〜10で算出し性格診断せよ。
+    必ずJSON形式のみで回答: {{"scores": {{"CP":0, "NP":0, "A":0, "FC":0, "AC":0}}, "性格類型": "...", "特徴": "...", "適職": "...", "恋愛のアドバイス": "..."}}
+    """
     try:
-        client = genai.Client(api_key=api_key)
-        model_id = "gemini-2.5-flash"
-        
-        prompt_content = f"""
-        属性: {age}、{gender}。
-        以下の文章から、書き手のエゴグラム（CP, NP, A, FC, AC）を各-10〜10の範囲で推論し、性格診断を行ってください。
-        
-        【解析ルール】
-        1. 内部で5回独立してプロファイリングを行い、その全スコアを「sampling_data」に出力してください。
-        2. スコアがマイナスの場合は「反転したエネルギー」として解釈してください。
-        
-        【解析対象の文章】
-        '{text}'
-        
-        【出力形式：JSON】
-        {{
-          "sampling_data": [
-            {{"CP": 数値, "NP": 数値, "A": 数値, "FC": 数値, "AC": 数値}},
-            {{"CP": 数値, "NP": 数値, "A": 数値, "FC": 数値, "AC": 数値}},
-            {{"CP": 数値, "NP": 数値, "A": 数値, "FC": 数値, "AC": 数値}},
-            {{"CP": 数値, "NP": 数値, "A": 数値, "FC": 数値, "AC": 数値}},
-            {{"CP": 数値, "NP": 数値, "A": 数値, "FC": 数値, "AC": 数値}}
-          ],
-          "性格類型": "短いキャッチコピー",
-          "特徴": "200字程度の詳細解説",
-          "適職": "100字以内の箇書き",
-          "恋愛のアドバイス": "100字以内のポイント"
-        }}
-        """
-        
         response = client.models.generate_content(
             model=model_id,
             contents=prompt_content,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
-                temperature=0.5
+                temperature=0.2 
             )
         )
-        
-        raw_data = json.loads(re.search(r'(\{.*\})', response.text.strip(), re.DOTALL).group(1))
-        samples = raw_data.get("sampling_data", [])
-        if not samples: return None
-        
-        # 各指標の最頻値を算出
-        final_scores = {}
-        for key in ["CP", "NP", "A", "FC", "AC"]:
-            values = [int(round(float(s.get(key, 0)))) for s in samples]
-            modes = statistics.multimode(values)
-            final_scores[key] = round(statistics.mean(modes), 2)
-        
-        return {
-            "scores": final_scores,
-            "raw_samples": samples,
-            "性格類型": raw_data.get("性格類型", ""),
-            "特徴": raw_data.get("特徴", ""),
-            "適職": raw_data.get("適職", ""),
-            "恋愛のアドバイス": raw_data.get("恋愛のアドバイス", "")
-        }
-    except Exception:
+        return json.loads(re.search(r'(\{.*\})', response.text.strip(), re.DOTALL).group(1))
+    except:
         return None
 
-# --- 4. 画面レイアウト ---
-st.title("⚡ インスタント・エゴグラム")
-st.caption("AIによる5層サンプリング解析：最頻値抽出により真実のプロファイルを特定します。")
+def run_full_diagnosis(text, gender, age):
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key: return None
+    client = genai.Client(api_key=api_key)
+    
+    all_results = []
+    progress_text = "Analyzing deep psychology..."
+    my_bar = st.progress(0, text=progress_text)
+    
+    for i in range(ANALYSIS_TRIALS):
+        res = get_single_analysis(text, gender, age, client)
+        if res:
+            all_results.append(res)
+        my_bar.progress((i + 1) / ANALYSIS_TRIALS, text=f"Processing analysis {i+1}/{ANALYSIS_TRIALS}...")
+        time.sleep(0.1)
+    
+    my_bar.empty()
+    if not all_results: return None
 
-st.sidebar.title("👤 プロフィール設定")
-gender = st.sidebar.selectbox("対象の性別", ["男性", "女性", "その他", "回答しない"], index=None, placeholder="選択してください")
-age = st.sidebar.selectbox("対象の年齢", ["10代", "20代", "30代", "40代", "50代", "60代", "70代以上"], index=2)
+    final_scores = {}
+    confidences = {}
+    raw_scores_list = [r["scores"] for r in all_results]
+    
+    for key in ["CP", "NP", "A", "FC", "AC"]:
+        vals = [int(round(float(s.get(key, 0)))) for s in raw_scores_list]
+        modes = statistics.multimode(vals)
+        mode_val = statistics.mean(modes)
+        final_scores[key] = round(mode_val, 2)
+        count_mode = vals.count(int(round(mode_val)))
+        confidences[key] = (count_mode / ANALYSIS_TRIALS) * 100
 
-input_text = st.text_area("解析したい文章を入力してください", height=300, placeholder="ここに文章をペーストしてください...")
+    base_res = all_results[0]
+    return {
+        "scores": final_scores,
+        "confidences": confidences,
+        "raw_samples": raw_scores_list,
+        "性格類型": base_res.get("性格類型", "分析中"),
+        "特徴": base_res.get("特徴", ""),
+        "適職": base_res.get("適職", ""),
+        "恋愛のアドバイス": base_res.get("恋愛のアドバイス", "")
+    }
 
-if st.button("🚀 精密診断を開始する"):
+# --- 5. UIレイアウト ---
+st.markdown("<h1 class='main-title'>INSTANT EGOGRAM PRO</h1>", unsafe_allow_html=True)
+st.caption(f"Precision Analysis Engine | Trials: {ANALYSIS_TRIALS}")
+
+with st.sidebar:
+    st.markdown("### 👤 User Profile")
+    gender = st.selectbox("性別", ["男性", "女性", "その他"], index=1)
+    age = st.selectbox("年齢", ["10代", "20代", "30代", "40代", "50代", "60代", "70代以上"], index=2)
+    st.divider()
+    st.info("このAI診断は文章のトーンから深層心理の『揺らぎ』を統計的に算出します。")
+
+input_text = st.text_area("解析文章を入力（SNS、自己紹介、セリフなど）", height=220, placeholder="ここに文章を入力してください...")
+
+if st.button("🚀 診断プロファイルを開始"):
     if input_text:
-        with st.spinner("5層の深層心理データを統合解析中..."):
-            result = get_batch_analysis(input_text, gender if gender else "未指定", age)
-            if result and "scores" in result:
-                st.session_state.diagnosis = result
-                st.session_state.scores = result["scores"]
-                st.session_state.raw_samples = result["raw_samples"]
-                st.rerun()
-            else:
-                st.error("解析に失敗しました。もう一度お試しください。")
+        result = run_full_diagnosis(input_text, gender, age)
+        if result:
+            st.session_state.diagnosis = result
+            st.rerun()
     else:
         st.warning("文章を入力してください。")
 
-# --- 5. 結果表示 ---
+# --- 6. 診断結果の表示 ---
 if st.session_state.diagnosis:
-    col1, col2 = st.columns([1, 1])
+    res = st.session_state.diagnosis
+    
+    col1, col2 = st.columns([1.2, 1])
     
     with col1:
-        st.subheader("📊 エゴグラム・プロファイル")
-        df = pd.DataFrame(list(st.session_state.scores.items()), columns=['項目', '値'])
+        st.markdown("<div class='res-card'>", unsafe_allow_html=True)
+        st.subheader("📊 心理特性プロファイル")
         
+        df = pd.DataFrame(list(res["scores"].items()), columns=['項目', '値'])
         fig = go.Figure()
+        # 棒グラフ
         fig.add_trace(go.Bar(
             x=df['項目'], y=df['値'],
-            marker_color='rgba(135, 206, 250, 0.4)',
-            marker_line_color='rgba(135, 206, 250, 1)',
-            marker_line_width=1.5
+            marker_color='rgba(88, 166, 255, 0.3)',
+            marker_line_color='#58a6ff',
+            marker_line_width=2,
+            name='Score'
         ))
+        # 折れ線
         fig.add_trace(go.Scatter(
             x=df['項目'], y=df['値'],
             mode='lines+markers',
-            line=dict(color='#ff4b4b', width=4),
-            marker=dict(size=10, color='#ff4b4b')
+            line=dict(color='#ff7b72', width=4),
+            marker=dict(size=10, color='#ff7b72', line=dict(color='white', width=2)),
+            name='Vector'
         ))
-        
         fig.update_layout(
-            yaxis=dict(range=[-10.1, 10.1], zeroline=True, zerolinewidth=2),
-            height=450, margin=dict(l=10, r=10, t=10, b=10),
-            showlegend=False, plot_bgcolor='rgba(0,0,0,0)'
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(color="#c9d1d9"),
+            yaxis=dict(range=[-10.5, 10.5], zeroline=True, zerolinecolor='#30363d', gridcolor='#30363d'),
+            xaxis=dict(gridcolor='#30363d'),
+            height=400, margin=dict(l=0, r=0, t=20, b=0),
+            showlegend=False
         )
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     with col2:
-        res = st.session_state.diagnosis
-        st.success(f"### 🏆 {res.get('性格類型', '診断結果')}")
-        st.write(f"**【特徴：心のベクトルと葛藤】**\n{res.get('特徴', '')}")
-        st.write(f"**【適職】**\n{res.get('適職', '')}")
-        st.write(f"**【恋愛のアドバイス】**\n{res.get('恋愛のアドバイス', '')}")
-
-    st.divider()
-    with st.expander("🔍 解析の根拠（5回分の詳細スコア）"):
-        if st.session_state.raw_samples:
-            sample_df = pd.DataFrame(st.session_state.raw_samples)
-            sample_df.index = [f"試行 {i+1}" for i in range(len(sample_df))]
-            st.table(sample_df)
-            st.caption("※これら5つの推論結果から最頻値を算出し、グラフを生成しています。")
+        st.markdown(f"""
+            <div class='res-card'>
+                <h2 style='color: #ff7b72; margin-top:0;'>🏆 {res['性格類型']}</h2>
+                <p style='font-size: 0.95rem; line-height: 1.6;'>{res['特徴']}</p>
+            </div>
+        """, unsafe_allow_html=True)
         
-    if st.button("🔄 新しい診断を行う"):
+        with st.container():
+            st.markdown("<div class='res-card'>", unsafe_allow_html=True)
+            t1, t2 = st.tabs(["💼 適職", "❤️ 恋愛"])
+            t1.write(res['適職'])
+            t2.write(res['恋愛のアドバイス'])
+            st.markdown("</div>", unsafe_allow_html=True)
+
+    # 信頼性と生データの表示（デザインを統一）
+    st.markdown("<div class='res-card'>", unsafe_allow_html=True)
+    c1, c2 = st.columns([1, 1.5])
+    with c1:
+        st.markdown("#### 🎯 解析確信度")
+        if ANALYSIS_TRIALS > 1:
+            for key, conf in res["confidences"].items():
+                st.write(f"{key}: {conf:.0f}%")
+                st.progress(conf / 100)
+        else:
+            st.caption("※現在シングル試行モードのため、確信度は100%と表示されます。")
+    
+    with c2:
+        st.markdown("#### 🔍 原数値（Raw Data）")
+        st.markdown("<div class='raw-data-area'>", unsafe_allow_html=True)
+        st.table(pd.DataFrame(res["raw_samples"]))
+        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    if st.button("🔄 新しい文章を解析する"):
         st.session_state.diagnosis = None
-        st.session_state.raw_samples = []
         st.rerun()
