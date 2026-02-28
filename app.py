@@ -164,15 +164,22 @@ else:
                     <script>
                     (function() {{
                         const synth = window.speechSynthesis;
-                        if (synth.speaking) {{
-                            synth.cancel();
-                        }} else {{
-                            const uttr = new SpeechSynthesisUtterance("{speech_text}");
-                            uttr.lang = 'ja-JP';
-                            uttr.rate = 1.0;
-                            synth.speak(new SpeechSynthesisUtterance(" "));
-                            synth.speak(uttr);
-                        }}
+                        const play = () => {{
+                            if (synth.speaking) {{
+                                synth.cancel();
+                            }} else {{
+                                const silence = new SpeechSynthesisUtterance(" ");
+                                silence.volume = 0;
+                                synth.speak(silence);
+                                
+                                const uttr = new SpeechSynthesisUtterance("{speech_text}");
+                                uttr.lang = 'ja-JP';
+                                uttr.rate = 1.0;
+                                uttr.pitch = 1.0;
+                                synth.speak(uttr);
+                            }}
+                        }};
+                        play();
                     }})();
                     </script>
                 """, height=0)
