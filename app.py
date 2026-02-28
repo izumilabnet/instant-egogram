@@ -150,8 +150,12 @@ def run_full_diagnosis(text, gender, age):
     
     for key in ["CP", "NP", "A", "FC", "AC"]:
         vals = [int(round(float(s.get(key, 0)))) for s in raw_scores_list]
+        
+        # 数値は「最頻値（mode）」を採用（複数ある場合は最小値を選択）
+        final_scores[key] = float(statistics.multimode(vals)[0])
+        
+        # 信頼度は「中央値（median）」基準のまま維持
         median_val = statistics.median(vals)
-        final_scores[key] = round(median_val, 2)
         count_in_range = sum(1 for v in vals if (median_val - 1) <= v <= (median_val + 1))
         confidences[key] = (count_in_range / ANALYSIS_TRIALS) * 100
 
@@ -171,7 +175,7 @@ if st.session_state.diagnosis is None:
     with st.sidebar:
         gender = st.selectbox("性別", ["", "男性", "女性", "その他", "回答しない"], index=0)
         age = st.selectbox("年齢", ["", "10代", "20代", "30代", "40代", "50代", "60代", "70代以上"], index=0)
-        st.info("独立推論の結果から『中央値』を特定し、その集中度を信頼度として算出します。")
+        st.info("独立推論の結果から『最頻値』を特定し、その集中度を信頼度として算出します。")
 
     input_text = st.text_area("Analysis Text", height=200, key="main_input", label_visibility="collapsed")
 
@@ -212,7 +216,7 @@ else:
         fig.add_trace(go.Bar(x=df['項目'], y=df['値'], marker_color='rgba(82, 183, 136, 0.3)', marker_line_color='#2d6a4f', marker_line_width=2))
         fig.add_trace(go.Scatter(x=df['項目'], y=df['値'], mode='lines+markers', line=dict(color='#ff7b72', width=4), marker=dict(size=10, color='#ff7b72')))
         fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="#2c3e50"), yaxis=dict(range=[-10.5, 10.5], zeroline=True), height=400, margin=dict(l=0, r=0, t=20, b=0), showlegend=False)
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
     with col2:
@@ -243,13 +247,6 @@ else:
     st.info(res.get("input_text", "データがありません"))
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # 印刷ボタン
-    if st.button("🖨️ この結果を印刷する", key="print_btn"):
-        st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
-
     if st.button("🔄 新しい文章を解析する", key="reset_btn"):
         st.session_state.diagnosis = None
         st.rerun()
-
-# --- 入力内容 ---
-# st.write(f"解析対象テキスト: {input_text}")
