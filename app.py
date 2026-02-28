@@ -77,6 +77,7 @@ if not st.session_state.auth:
                         <li>属性選択：対象の性別と年齢を選択。</li>
                         <li>内容入力：文章を具体的（100〜300字）に入力。</li>
                         <li>分析実行：ボタン押下後、スキャンが開始されます。</li>
+                        <li>グラフの形が崩れた時、ダブルタップすると戻ります。</li>
                     </ul>
                     <p style='color: #b91c1c; font-weight: bold;'>■ ⚠️ 注意事項</p>
                     <ul>
@@ -147,7 +148,7 @@ if st.session_state.diagnosis is None:
     with col_input_1: gender = st.selectbox("性別", ["", "男性", "女性", "その他", "回答しない"], index=0)
     with col_input_2: age = st.selectbox("年齢", ["", "10代", "20代", "30代", "40代", "50代", "60代", "70代以上"], index=0)
     input_text = st.text_area("Analysis Text", height=200, key="main_input", label_visibility="collapsed", placeholder="分析する文章をここに入力してください")
-    if st.button("🚀 診断プロファイルを開始", key="diag_btn"):
+    if st.button("🚀 診断を開始", key="diag_btn"):
         if input_text:
             result = run_full_diagnosis(input_text, gender, age)
             if result:
