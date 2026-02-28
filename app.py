@@ -66,7 +66,7 @@ if not st.session_state.auth:
             st.markdown("""
                 <div style='font-size: 0.85rem; color: #374151;'>
                     <p style='color: #1e3a8a; font-weight: bold; margin-top: 10px;'>■ アプリの概要</p>
-                    <ul><li>Eric Berne氏の“交流分析”に基づき、AIが対人関係の心理パターンを自動分析します。このアプリでは、新しい試みとして、各自我状態の「正負」に着目していますが、スコアがマイナスの場合は、単なる「欠如」ではなく「反転したエネルギー（例：NPなら冷徹、ACなら反抗心）」として解釈してください。</li></ul>
+                    <ul><li>Eric Berne氏の“交流分析”に基づき、AIが対人関係の心理パターンを自動分析します。このアプリでは、新しい試みとして、各自我状態の「正負」に着目していますが、スコアがマイナスの場合は、単なる「欠由」ではなく「反転したエネルギー（例：NPなら冷徹、ACなら反抗心）」として解釈してください。</li></ul>
                     <p style='color: #1e3a8a; font-weight: bold;'>■ 使い方</p>
                     <ul>
                         <li>ログイン：パスワードを入力して分析画面へ。</li>
@@ -159,16 +159,19 @@ else:
         with head_col1: st.subheader("📊 心理特性プロファイル")
         with head_col2:
             speech_text = f"診断結果は、{res['性格類型']}です。特徴。{res['特徴']}。成長へ向けて。{res['成長へ向けて']}。適職。{res['適職']}。恋愛のアドバイス。{res['恋愛のアドバイス']}".replace('"', '”').replace('\n', ' ')
-            if st.button("🔊", help="結果を読み上げる"):
+            if st.button("🔊", help="読み上げ/停止"):
                 st.components.v1.html(f"""
                     <script>
                     (function() {{
-                        window.speechSynthesis.cancel();
-                        const uttr = new SpeechSynthesisUtterance("{speech_text}");
-                        uttr.lang = 'ja-JP';
-                        uttr.rate = 1.1;
-                        window.speechSynthesis.speak(new SpeechSynthesisUtterance(""));
-                        window.speechSynthesis.speak(uttr);
+                        if (window.speechSynthesis.speaking) {{
+                            window.speechSynthesis.cancel();
+                        }} else {{
+                            const uttr = new SpeechSynthesisUtterance("{speech_text}");
+                            uttr.lang = 'ja-JP';
+                            uttr.rate = 1.1;
+                            window.speechSynthesis.speak(new SpeechSynthesisUtterance(""));
+                            window.speechSynthesis.speak(uttr);
+                        }}
                     }})();
                     </script>
                 """, height=0)
@@ -176,7 +179,6 @@ else:
         fig = go.Figure()
         fig.add_trace(go.Bar(x=df['項目'], y=df['値'], marker_color='rgba(82, 183, 136, 0.3)', marker_line_color='#2d6a4f', marker_line_width=2))
         fig.add_trace(go.Scatter(x=df['項目'], y=df['値'], mode='lines+markers', line=dict(color='#ff7b72', width=4), marker=dict(size=10, color='#ff7b72')))
-        # グラフのスケールとサイズを固定（指での操作を無効化）
         fig.update_layout(
             paper_bgcolor='rgba(0,0,0,0)', 
             plot_bgcolor='rgba(0,0,0,0)', 
@@ -189,6 +191,9 @@ else:
             dragmode=False
         )
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False, 'staticPlot': False, 'scrollZoom': False})
+        
+        conf_html = "".join([f"<span style='margin-right:15px;'>{k}: {v:.0f}%</span>" for k, v in res["confidences"].items()])
+        st.markdown(f"<div style='font-size: 0.75rem; color: #6b7280; text-align: center; border-top: 1px solid #eee; padding-top: 8px;'>解析精度(±1): {conf_html}</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
     with col2:
         st.markdown(f"<div class='res-card'><h2 style='color: #2d6a4f; margin-top:0;'>🏆 {res['性格類型']}</h2><p>{res['特徴']}</p></div>", unsafe_allow_html=True)
