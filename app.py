@@ -32,7 +32,7 @@ st.markdown("""
     .footer { text-align: center; color: #9ca3af; font-size: 0.8rem; margin-top: 2rem; }
 
     /* iOS読み上げボタン専用スタイル */
-    .tts-btn { background: #f0fdf4; border: 1px solid #52b788; border-radius: 8px; color: #2d6a4f; cursor: pointer; width: 100%; height: 40px; font-size: 1.2rem; transition: 0.2s; }
+    .tts-btn { background: #f0fdf4; border: 1px solid #52b788; border-radius: 8px; color: #2d6a4f; cursor: pointer; width: 100%; height: 38px; font-size: 1.1rem; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
     .tts-btn:active { background: #dcfce7; }
 
     @media print {
@@ -159,10 +159,10 @@ else:
     col1, col2 = st.columns([1.2, 1])
     with col1:
         st.markdown("<div class='res-card'>", unsafe_allow_html=True)
+        # ヘッダー部分：タイトルと読み上げボタンを横並びに配置
         head_col1, head_col2 = st.columns([4, 1])
         with head_col1: st.subheader("📊 心理特性プロファイル")
         with head_col2:
-            # iPhone/iOS対応の読み上げボタン
             speech_msg = f"診断結果は、{res['性格類型']}です。特徴。{res['特徴']}。成長へ向けて。{res['成長へ向けて']}。適職。{res['適職']}。恋愛のアドバイス。{res['恋愛のアドバイス']}".replace('"', '”').replace('\n', ' ')
             st.components.v1.html(f"""
                 <button class="tts-btn" onclick="
@@ -173,15 +173,11 @@ else:
                         uttr.lang = 'ja-JP';
                         uttr.rate = 1.0;
                         uttr.pitch = 1.0;
-                        // iOS用アクティベーション
                         synth.speak(new SpeechSynthesisUtterance(' '));
                         synth.speak(uttr);
                     }}
                 ">🔊</button>
-                <style>
-                .tts-btn {{ background: #f0fdf4; border: 1px solid #52b788; border-radius: 8px; color: #2d6a4f; cursor: pointer; width: 100%; height: 40px; font-size: 1.2rem; }}
-                </style>
-            """, height=45)
+            """, height=40)
 
         df = pd.DataFrame(list(res["scores"].items()), columns=['項目', '値'])
         fig = go.Figure()
@@ -202,19 +198,25 @@ else:
         
         conf_html = "".join([f"<span style='margin-right:15px;'>{k}: {v:.0f}%</span>" for k, v in res["confidences"].items()])
         st.markdown(f"<div style='font-size: 0.75rem; color: #6b7280; text-align: center; border-top: 1px solid #eee; padding-top: 8px;'>解析精度(±1): {conf_html}</div>", unsafe_allow_html=True)
-
-        with st.expander("🛠️ 解析データをすべて表示"):
-            raw_df = pd.DataFrame(res["raw_samples"])
-            st.dataframe(raw_df, use_container_width=True)
-            st.caption(f"※全{ANALYSIS_TRIALS}回の独立試行スコアを表示しています。")
-
         st.markdown("</div>", unsafe_allow_html=True)
+
+        # 入力文の表示
+        st.markdown("<div class='res-card'>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size: 0.85rem; font-weight: bold; color: #2d6a4f; margin-bottom: 5px;'>📝 解析対象の文章</p>", unsafe_allow_html=True)
+        st.markdown(f"<div style='font-size: 0.9rem; color: #4b5563; background: #f9fafb; padding: 10px; border-radius: 8px; border: 1px inset #f3f4f6;'>{res['input_text']}</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
     with col2:
         st.markdown(f"<div class='res-card'><h2 style='color: #2d6a4f; margin-top:0;'>🏆 {res['性格類型']}</h2><p>{res['特徴']}</p></div>", unsafe_allow_html=True)
         st.markdown("<div class='res-card'>", unsafe_allow_html=True)
         t3, t1, t2 = st.tabs(["🌱 成長へ向けて", "💼 適職", "❤️ 恋愛"])
         t3.write(res['成長へ向けて']); t1.write(res['適職']); t2.write(res['恋愛のアドバイス'])
         st.markdown("</div>", unsafe_allow_html=True)
+
+        with st.expander("🛠️ 解析データをすべて表示"):
+            raw_df = pd.DataFrame(res["raw_samples"])
+            st.dataframe(raw_df, use_container_width=True)
+            st.caption(f"※全{ANALYSIS_TRIALS}回の独立試行スコアを表示しています。")
 
     if st.button("🔄 新しい文章を解析する", key="reset_btn"):
         st.session_state.diagnosis = None
