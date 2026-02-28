@@ -12,7 +12,7 @@ import time
 # --- 0. 起動中メッセージ（読み込み完了まで表示） ---
 if 'initialized' not in st.session_state:
     with st.spinner('🚀 システム起動中（1分程度かかる場合があります）...'):
-        time.sleep(1.5) # 初回起動の演出
+        time.sleep(1.5)
     st.session_state.initialized = True
 
 # --- 1. ページ設定とスタイル ---
@@ -61,6 +61,27 @@ if not st.session_state.auth:
                 st.rerun()
             else:
                 st.error("パスワードが正しくありません")
+
+        with st.expander("📘 使用マニュアルを表示"):
+            st.markdown("""
+                <div style='font-size: 0.85rem; color: #374151;'>
+                    <p style='color: #1e3a8a; font-weight: bold; margin-top: 10px;'>■ アプリの概要</p>
+                    <ul><li>Eric Berne氏の“交流分析”に基づき、AIが対人関係の心理パターンを自動分析します。このアプリでは、新しい試みとして、各自我状態の「正負」に着目していますが、スコアがマイナスの場合は、単なる「欠如」ではなく「反転したエネルギー（例：NPなら冷徹、ACなら反抗心）」として解釈してください。</li></ul>
+                    <p style='color: #1e3a8a; font-weight: bold;'>■ 使い方</p>
+                    <ul>
+                        <li>ログイン：パスワードを入力して分析画面へ。</li>
+                        <li>属性選択：対象の性別と年齢を選択。</li>
+                        <li>内容入力：文章を具体的（100〜300字）に入力。</li>
+                        <li>分析実行：ボタン押下後、スキャンが開始されます。</li>
+                    </ul>
+                    <p style='color: #b91c1c; font-weight: bold;'>■ ⚠️ 注意事項</p>
+                    <ul>
+                        <li>データ：個人を特定する情報の入力は控えてください。</li>
+                        <li>免責：本ツールは気づきのためのもので、医学的診断ではありません。</li>
+                    </ul>
+                </div>
+            """, unsafe_allow_html=True)
+
         st.divider()
         st.markdown("<div class='footer'>© 2026 PsychoGameAnalyzers（代表：和泉光則）<br>Based on Eric Berne’s Transactional Analysis</div>", unsafe_allow_html=True)
     st.stop()
@@ -146,10 +167,7 @@ else:
                         const uttr = new SpeechSynthesisUtterance("{speech_text}");
                         uttr.lang = 'ja-JP';
                         uttr.rate = 1.1;
-                        
-                        uttr.onstart = () => {{ console.log("Speaking started"); }};
-                        uttr.onend = () => {{ console.log("Speaking ended"); }};
-                        
+                        window.speechSynthesis.speak(new SpeechSynthesisUtterance(""));
                         window.speechSynthesis.speak(uttr);
                     }})();
                     </script>
@@ -158,8 +176,19 @@ else:
         fig = go.Figure()
         fig.add_trace(go.Bar(x=df['項目'], y=df['値'], marker_color='rgba(82, 183, 136, 0.3)', marker_line_color='#2d6a4f', marker_line_width=2))
         fig.add_trace(go.Scatter(x=df['項目'], y=df['値'], mode='lines+markers', line=dict(color='#ff7b72', width=4), marker=dict(size=10, color='#ff7b72')))
-        fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="#2c3e50"), yaxis=dict(range=[-10.5, 10.5], zeroline=True), height=400, margin=dict(l=0, r=0, t=20, b=0), showlegend=False)
-        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+        # グラフのスケールとサイズを固定（指での操作を無効化）
+        fig.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)', 
+            plot_bgcolor='rgba(0,0,0,0)', 
+            font=dict(color="#2c3e50"), 
+            yaxis=dict(range=[-10.5, 10.5], zeroline=True, fixedrange=True), 
+            xaxis=dict(fixedrange=True),
+            height=400, 
+            margin=dict(l=0, r=0, t=20, b=0), 
+            showlegend=False,
+            dragmode=False
+        )
+        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False, 'staticPlot': False, 'scrollZoom': False})
         st.markdown("</div>", unsafe_allow_html=True)
     with col2:
         st.markdown(f"<div class='res-card'><h2 style='color: #2d6a4f; margin-top:0;'>🏆 {res['性格類型']}</h2><p>{res['特徴']}</p></div>", unsafe_allow_html=True)
