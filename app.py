@@ -46,7 +46,7 @@ st.markdown("""
 if 'auth' not in st.session_state: st.session_state.auth = False
 if 'diagnosis' not in st.session_state: st.session_state.diagnosis = None
 
-ANALYSIS_TRIALS = 1
+ANALYSIS_TRIALS = 5
 
 # --- 2. 認証・トップページ ---
 if not st.session_state.auth:
@@ -159,9 +159,8 @@ else:
     col1, col2 = st.columns([1.2, 1])
     with col1:
         st.markdown("<div class='res-card'>", unsafe_allow_html=True)
-        # ヘッダー部分：タイトルと読み上げボタンを横並びに配置
         head_col1, head_col2 = st.columns([4, 1])
-        with head_col1: st.subheader("📊 心理特性プロファイル")
+        with head_col1: st.subheader("📊 あなたのエゴグラム")
         with head_col2:
             speech_msg = f"診断結果は、{res['性格類型']}です。特徴。{res['特徴']}。成長へ向けて。{res['成長へ向けて']}。適職。{res['適職']}。恋愛のアドバイス。{res['恋愛のアドバイス']}".replace('"', '”').replace('\n', ' ')
             st.components.v1.html(f"""
@@ -197,13 +196,7 @@ else:
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False, 'staticPlot': False, 'scrollZoom': False})
         
         conf_html = "".join([f"<span style='margin-right:15px;'>{k}: {v:.0f}%</span>" for k, v in res["confidences"].items()])
-        st.markdown(f"<div style='font-size: 0.75rem; color: #6b7280; text-align: center; border-top: 1px solid #eee; padding-top: 8px;'>解析精度(±1): {conf_html}</div>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-
-        # 入力文の表示
-        st.markdown("<div class='res-card'>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size: 0.85rem; font-weight: bold; color: #2d6a4f; margin-bottom: 5px;'>📝 解析対象の文章</p>", unsafe_allow_html=True)
-        st.markdown(f"<div style='font-size: 0.9rem; color: #4b5563; background: #f9fafb; padding: 10px; border-radius: 8px; border: 1px inset #f3f4f6;'>{res['input_text']}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='font-size: 0.75rem; color: #6b7280; text-align: center; border-top: 1px solid #eee; padding-top: 8px;'>信頼度: {conf_html}</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
     with col2:
@@ -217,6 +210,11 @@ else:
             raw_df = pd.DataFrame(res["raw_samples"])
             st.dataframe(raw_df, use_container_width=True)
             st.caption(f"※全{ANALYSIS_TRIALS}回の独立試行スコアを表示しています。")
+
+    st.markdown("<div class='res-card'>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size: 0.85rem; font-weight: bold; color: #2d6a4f; margin-bottom: 5px;'>📝 解析対象の文章</p>", unsafe_allow_html=True)
+    st.markdown(f"<div style='font-size: 0.9rem; color: #4b5563; background: #f9fafb; padding: 10px; border-radius: 8px; border: 1px inset #f3f4f6;'>{res['input_text']}</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     if st.button("🔄 新しい文章を解析する", key="reset_btn"):
         st.session_state.diagnosis = None
