@@ -150,11 +150,7 @@ def run_full_diagnosis(text, gender, age):
     
     for key in ["CP", "NP", "A", "FC", "AC"]:
         vals = [int(round(float(s.get(key, 0)))) for s in raw_scores_list]
-        
-        # 数値は「最頻値（mode）」を採用
         final_scores[key] = float(statistics.multimode(vals)[0])
-        
-        # 信頼度は「中央値（median）」基準
         median_val = statistics.median(vals)
         count_in_range = sum(1 for v in vals if (median_val - 1) <= v <= (median_val + 1))
         confidences[key] = (count_in_range / ANALYSIS_TRIALS) * 100
@@ -172,12 +168,13 @@ def run_full_diagnosis(text, gender, age):
 st.markdown("<h1 class='main-title'>INSTANT EGOGRAM PRO</h1>", unsafe_allow_html=True)
 
 if st.session_state.diagnosis is None:
-    with st.sidebar:
+    col_input_1, col_input_2 = st.columns(2)
+    with col_input_1:
         gender = st.selectbox("性別", ["", "男性", "女性", "その他", "回答しない"], index=0)
+    with col_input_2:
         age = st.selectbox("年齢", ["", "10代", "20代", "30代", "40代", "50代", "60代", "70代以上"], index=0)
-        st.info("独立推論の結果から『最頻値』を特定し、その集中度を信頼度として算出します。")
-
-    input_text = st.text_area("Analysis Text", height=200, key="main_input", label_visibility="collapsed")
+    
+    input_text = st.text_area("Analysis Text", height=200, key="main_input", label_visibility="collapsed", placeholder="分析する文章をここに入力してください")
 
     if st.button("🚀 診断プロファイルを開始", key="diag_btn"):
         if input_text:
@@ -202,14 +199,14 @@ else:
             if st.button("🔊", help="結果を読み上げる"):
                 st.components.v1.html(f"""
                     <script>
-                    window.onload = function() {{
+                    (function() {{
                         var msg = new SpeechSynthesisUtterance();
                         msg.text = "{speech_text}";
                         msg.lang = 'ja-JP';
                         msg.rate = 1.0;
                         window.speechSynthesis.cancel();
                         window.speechSynthesis.speak(msg);
-                    }};
+                    }})();
                     </script>
                 """, height=0)
 
@@ -243,7 +240,6 @@ else:
             st.table(pd.DataFrame(res["raw_samples"]))
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # 入力内容の表示セクション
     st.markdown("<div class='res-card'>", unsafe_allow_html=True)
     st.markdown("#### 📝 解析対象データ")
     st.info(res.get("input_text", "データがありません"))
