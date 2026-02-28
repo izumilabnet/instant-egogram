@@ -9,11 +9,10 @@ import re
 import statistics
 import time
 
-# --- 0. 起動中メッセージ（初期表示） ---
+# --- 0. 起動中メッセージ（読み込み完了まで表示） ---
 if 'initialized' not in st.session_state:
-    with st.empty():
-        st.markdown("<p style='text-align: center; color: #2d6a4f;'>🚀 システム起動中（1分程度かかる場合があります）...</p>", unsafe_allow_html=True)
-        time.sleep(1)
+    with st.spinner('🚀 システム起動中（1分程度かかる場合があります）...'):
+        time.sleep(1.5) # 初回起動の演出
     st.session_state.initialized = True
 
 # --- 1. ページ設定とスタイル ---
@@ -144,11 +143,14 @@ else:
                     <script>
                     (function() {{
                         window.speechSynthesis.cancel();
-                        var msg = new SpeechSynthesisUtterance();
-                        msg.text = "{speech_text}";
-                        msg.lang = 'ja-JP';
-                        msg.rate = 1.0;
-                        window.speechSynthesis.speak(msg);
+                        const uttr = new SpeechSynthesisUtterance("{speech_text}");
+                        uttr.lang = 'ja-JP';
+                        uttr.rate = 1.1;
+                        
+                        uttr.onstart = () => {{ console.log("Speaking started"); }};
+                        uttr.onend = () => {{ console.log("Speaking ended"); }};
+                        
+                        window.speechSynthesis.speak(uttr);
                     }})();
                     </script>
                 """, height=0)
