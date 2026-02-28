@@ -42,7 +42,7 @@ st.markdown("""
 if 'auth' not in st.session_state: st.session_state.auth = False
 if 'diagnosis' not in st.session_state: st.session_state.diagnosis = None
 
-ANALYSIS_TRIALS = 3 
+ANALYSIS_TRIALS = 5 
 
 # --- 2. 認証・トップページ ---
 if not st.session_state.auth:
@@ -66,7 +66,7 @@ if not st.session_state.auth:
             st.markdown("""
                 <div style='font-size: 0.85rem; color: #374151;'>
                     <p style='color: #1e3a8a; font-weight: bold; margin-top: 10px;'>■ アプリの概要</p>
-                    <ul><li>Eric Berne氏の“交流分析”に基づき、AIが対人関係の心理パターンを自動分析します。このアプリでは、新しい試みとして、各自我状態の「正負」に着目していますが、スコアがマイナスの場合は、単なる「欠由」ではなく「反転したエネルギー（例：NPなら冷徹、ACなら反抗心）」として解釈してください。</li></ul>
+                    <ul><li>Eric Berne氏の“交流分析”に基づき、AIが対人関係の心理パターンを自動分析します。</li><li>入力した文章に対し分析を5回行い、その中の最頻値を各自我状態に採用しています。信頼度はそのばらつきの度合いで決めています。</li><li>このアプリでは、新しい試みとして、各自我状態の「正負」に着目していますが、スコアがマイナスの場合は、単なる「欠由」ではなく「反転したエネルギー（例：NPなら冷徹、ACなら反抗心）」として解釈してください。</li></ul>
                     <p style='color: #1e3a8a; font-weight: bold;'>■ 使い方</p>
                     <ul>
                         <li>ログイン：パスワードを入力して分析画面へ。</li>
