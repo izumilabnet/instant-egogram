@@ -42,7 +42,7 @@ st.markdown("""
 if 'auth' not in st.session_state: st.session_state.auth = False
 if 'diagnosis' not in st.session_state: st.session_state.diagnosis = None
 
-ANALYSIS_TRIALS = 2 
+ANALYSIS_TRIALS = 5
 
 # --- 2. 認証・トップページ ---
 if not st.session_state.auth:
@@ -88,7 +88,7 @@ if not st.session_state.auth:
 
 # --- 3. 分析エンジン ---
 def get_single_analysis(text, gender, age, client):
-    model_id = "gemini-2.5-flash" 
+    model_id = "gemini-2.5-flash"
     prompt_content = f"属性: {age}、{gender}。対象文章: '{text}' エゴグラム(CP,NP,A,FC,AC)を-10〜10で算出し性格診断せよ。必ずJSON形式のみで回答し、回答構成: {{\"scores\": {{\"CP\":0, \"NP\":0, \"A\":0, \"FC\":0, \"AC\":0}}, \"性格類型\": \"...\", \"特徴\": \"...\", \"適職\": \"...\", \"恋愛のアドバイス\": \"...\", \"成長へ向けて\": \"...\"}}"
     try:
         response = client.models.generate_content(
@@ -167,11 +167,10 @@ else:
                         if (synth.speaking) {{
                             synth.cancel();
                         }} else {{
-                            const silence = new SpeechSynthesisUtterance("");
-                            synth.speak(silence);
                             const uttr = new SpeechSynthesisUtterance("{speech_text}");
                             uttr.lang = 'ja-JP';
-                            uttr.rate = 1.1;
+                            uttr.rate = 1.0;
+                            synth.speak(new SpeechSynthesisUtterance(" "));
                             synth.speak(uttr);
                         }}
                     }})();
@@ -197,7 +196,7 @@ else:
         conf_html = "".join([f"<span style='margin-right:15px;'>{k}: {v:.0f}%</span>" for k, v in res["confidences"].items()])
         st.markdown(f"<div style='font-size: 0.75rem; color: #6b7280; text-align: center; border-top: 1px solid #eee; padding-top: 8px;'>解析精度(±1): {conf_html}</div>", unsafe_allow_html=True)
 
-        with st.expander("🛠️ 解析生データの表示"):
+        with st.expander("🛠️ 解析データをすべて表示"):
             raw_df = pd.DataFrame(res["raw_samples"])
             st.dataframe(raw_df, use_container_width=True)
             st.caption(f"※全{ANALYSIS_TRIALS}回の独立試行スコアを表示しています。")
