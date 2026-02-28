@@ -10,7 +10,7 @@ import statistics
 import time
 
 # --- 0. 解析回数設定（開発時:1 / 運用時:5） ---
-ANALYSIS_TRIALS = 5 
+ANALYSIS_TRIALS = 1 
 
 # --- 1. ページ設定とスタイル ---
 st.set_page_config(page_title="INSTANT EGOGRAM", layout="wide")
@@ -193,16 +193,19 @@ else:
         with head_col1:
             st.subheader("📊 心理特性プロファイル")
         with head_col2:
-            speech_text = f"診断結果は、{res['性格類型']}です。特徴。{res['特徴']}。成長へ向けて。{res['成長へ向けて']}。適職。{res['適職']}。恋愛のアドバイス。{res['恋愛のアドバイス']}"
+            speech_text = f"診断結果は、{res['性格類型']}です。特徴。{res['特徴']}。成長へ向けて。{res['成長へ向けて']}。適職。{res['適職']}。恋愛のアドバイス。{res['恋愛のアドバイス']}".replace('"', '”').replace('\n', ' ')
+            
             if st.button("🔊", help="結果を読み上げる"):
-                st.markdown(f"""
+                st.components.v1.html(f"""
                     <script>
                     var msg = new SpeechSynthesisUtterance();
-                    msg.text = "{speech_text.replace('"', '”').replace('\\n', ' ')}";
+                    msg.text = "{speech_text}";
                     msg.lang = 'ja-JP';
+                    msg.rate = 1.0;
+                    window.speechSynthesis.cancel();
                     window.speechSynthesis.speak(msg);
                     </script>
-                """, unsafe_allow_html=True)
+                """, height=0)
 
         df = pd.DataFrame(list(res["scores"].items()), columns=['項目', '値'])
         fig = go.Figure()
