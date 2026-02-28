@@ -31,6 +31,10 @@ st.markdown("""
     section[data-testid="stSidebar"] { background-color: #e8f5f1; }
     .footer { text-align: center; color: #9ca3af; font-size: 0.8rem; margin-top: 2rem; }
 
+    /* iOS読み上げボタン専用スタイル */
+    .tts-btn { background: #f0fdf4; border: 1px solid #52b788; border-radius: 8px; color: #2d6a4f; cursor: pointer; width: 100%; height: 40px; font-size: 1.2rem; transition: 0.2s; }
+    .tts-btn:active { background: #dcfce7; }
+
     @media print {
         section[data-testid="stSidebar"], .stButton, header, footer, .footer { display: none !important; }
         .stApp { background-color: white !important; }
@@ -158,31 +162,27 @@ else:
         head_col1, head_col2 = st.columns([4, 1])
         with head_col1: st.subheader("📊 心理特性プロファイル")
         with head_col2:
-            speech_text = f"診断結果は、{res['性格類型']}です。特徴。{res['特徴']}。成長へ向けて。{res['成長へ向けて']}。適職。{res['適職']}。恋愛のアドバイス。{res['恋愛のアドバイス']}".replace('"', '”').replace('\n', ' ')
-            if st.button("🔊", help="読み上げ/停止"):
-                st.components.v1.html(f"""
-                    <script>
-                    (function() {{
-                        const synth = window.speechSynthesis;
-                        const play = () => {{
-                            if (synth.speaking) {{
-                                synth.cancel();
-                            }} else {{
-                                const silence = new SpeechSynthesisUtterance(" ");
-                                silence.volume = 0;
-                                synth.speak(silence);
-                                
-                                const uttr = new SpeechSynthesisUtterance("{speech_text}");
-                                uttr.lang = 'ja-JP';
-                                uttr.rate = 1.0;
-                                uttr.pitch = 1.0;
-                                synth.speak(uttr);
-                            }}
-                        }};
-                        play();
-                    }})();
-                    </script>
-                """, height=0)
+            # iPhone/iOS対応の読み上げボタン
+            speech_msg = f"診断結果は、{res['性格類型']}です。特徴。{res['特徴']}。成長へ向けて。{res['成長へ向けて']}。適職。{res['適職']}。恋愛のアドバイス。{res['恋愛のアドバイス']}".replace('"', '”').replace('\n', ' ')
+            st.components.v1.html(f"""
+                <button class="tts-btn" onclick="
+                    const synth = window.speechSynthesis;
+                    if (synth.speaking) {{ synth.cancel(); }}
+                    else {{
+                        const uttr = new SpeechSynthesisUtterance('{speech_msg}');
+                        uttr.lang = 'ja-JP';
+                        uttr.rate = 1.0;
+                        uttr.pitch = 1.0;
+                        // iOS用アクティベーション
+                        synth.speak(new SpeechSynthesisUtterance(' '));
+                        synth.speak(uttr);
+                    }}
+                ">🔊</button>
+                <style>
+                .tts-btn {{ background: #f0fdf4; border: 1px solid #52b788; border-radius: 8px; color: #2d6a4f; cursor: pointer; width: 100%; height: 40px; font-size: 1.2rem; }}
+                </style>
+            """, height=45)
+
         df = pd.DataFrame(list(res["scores"].items()), columns=['項目', '値'])
         fig = go.Figure()
         fig.add_trace(go.Bar(x=df['項目'], y=df['値'], marker_color='rgba(82, 183, 136, 0.3)', marker_line_color='#2d6a4f', marker_line_width=2))
