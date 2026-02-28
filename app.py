@@ -10,7 +10,7 @@ import statistics
 import time
 
 # --- 0. 解析回数設定（開発時:1 / 運用時:5） ---
-ANALYSIS_TRIALS = 5 
+ANALYSIS_TRIALS = 1 
 
 # --- 1. ページ設定とスタイル ---
 st.set_page_config(page_title="INSTANT EGOGRAM", layout="wide")
@@ -43,7 +43,7 @@ if 'diagnosis' not in st.session_state: st.session_state.diagnosis = None
 # --- 2. 認証・トップページ ---
 if not st.session_state.auth:
     st.markdown("<h1 class='main-title'>インスタント・エゴグラム</h1>", unsafe_allow_html=True)
-    st.markdown("<p class='main-subtitle'>〜 交流分析に基づく自己理解ツール 〜</p>", unsafe_allow_html=True)
+    st.markdown("<p class='main-subtitle'>〜 交流分析理論に基づく自己理解ツール 〜</p>", unsafe_allow_html=True)
 
     col_top_1, col_top_2, col_top_3 = st.columns([1, 2, 1])
     
@@ -117,7 +117,7 @@ def get_single_analysis(text, gender, age, client):
         "特徴": "...", 
         "適職": "...", 
         "恋愛のアドバイス": "...",
-        "成長へ向けて": "入力された性別、年齢を考慮しながら、今のエゴグラムが人生で積み上げた大切な個性であることを肯定する文章から始め、無理なく成長するための方向性を250字程度で具体的に記述してください"
+        "成長へ向けて": "今のエゴグラムが人生で積み上げた大切な個性であることを肯定する文章から始め、無理なく成長するための方向性を250字程度で具体的に記述してください"
     }}
     """
     try:
@@ -125,42 +125,25 @@ def get_single_analysis(text, gender, age, client):
             model=model_id, contents=prompt_content,
             config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.2)
         )
-        match = re.search(r'(\{.*\})', response.text.strip(), re.DOTALL)
-        if match:
-            return json.loads(match.group(1))
-        return None
-    except Exception as e:
-        return None
+        return json.loads(re.search(r'(\{.*\})', response.text.strip(), re.DOTALL).group(1))
+    except: return None
 
 def run_full_diagnosis(text, gender, age):
     api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        st.error("APIキーが見つかりません。")
-        return None
-    
+    if not api_key: return None
     client = genai.Client(api_key=api_key)
     all_results = []
-    my_bar = st.progress(0, text="Analyzing psychological vectors (5 trials)...")
+    my_bar = st.progress(0, text="Analyzing psychological vectors...")
     
     for i in range(ANALYSIS_TRIALS):
         res = get_single_analysis(text, gender, age, client)
-        if res:
-            all_results.append(res)
-        else:
-            time.sleep(1)
-            res_retry = get_single_analysis(text, gender, age, client)
-            if res_retry:
-                all_results.append(res_retry)
-        
+        if res: all_results.append(res)
         my_bar.progress((i + 1) / ANALYSIS_TRIALS)
-        time.sleep(0.5)
+        time.sleep(0.1)
     
     my_bar.empty()
-    if len(all_results) == 0:
-        st.error("解析に失敗しました。もう一度お試しください。")
-        return None
+    if not all_results: return None
 
-    current_trials = len(all_results)
     final_scores = {}
     confidences = {}
     raw_scores_list = [r["scores"] for r in all_results]
@@ -170,7 +153,7 @@ def run_full_diagnosis(text, gender, age):
         median_val = statistics.median(vals)
         final_scores[key] = round(median_val, 2)
         count_in_range = sum(1 for v in vals if (median_val - 1) <= v <= (median_val + 1))
-        confidences[key] = (count_in_range / current_trials) * 100
+        confidences[key] = (count_in_range / ANALYSIS_TRIALS) * 100
 
     base_res = all_results[0]
     return {
@@ -182,13 +165,13 @@ def run_full_diagnosis(text, gender, age):
     }
 
 # --- 4. メイン画面（認証後） ---
-st.markdown("<h1 class='main-title'>INSTANT EGOGRAM</h1>", unsafe_allow_html=True)
+st.markdown("<h1 class='main-title'>INSTANT EGOGRAM PRO</h1>", unsafe_allow_html=True)
 
 if st.session_state.diagnosis is None:
     with st.sidebar:
         gender = st.selectbox("性別", ["", "男性", "女性", "その他", "回答しない"], index=0)
         age = st.selectbox("年齢", ["", "10代", "20代", "30代", "40代", "50代", "60代", "70代以上"], index=0)
-        st.info("独立推論を5回行い、その結果から『中央値』を特定し、エゴグラムを描きます。")
+        st.info("独立推論の結果から『中央値』を特定し、その集中度を信頼度として算出します。")
 
     input_text = st.text_area("Analysis Text", height=200, key="main_input", label_visibility="collapsed")
 
@@ -229,7 +212,7 @@ else:
         fig.add_trace(go.Bar(x=df['項目'], y=df['値'], marker_color='rgba(82, 183, 136, 0.3)', marker_line_color='#2d6a4f', marker_line_width=2))
         fig.add_trace(go.Scatter(x=df['項目'], y=df['値'], mode='lines+markers', line=dict(color='#ff7b72', width=4), marker=dict(size=10, color='#ff7b72')))
         fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="#2c3e50"), yaxis=dict(range=[-10.5, 10.5], zeroline=True), height=400, margin=dict(l=0, r=0, t=20, b=0), showlegend=False)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
         st.markdown("</div>", unsafe_allow_html=True)
 
     with col2:
@@ -242,12 +225,12 @@ else:
     st.markdown("<div class='res-card'>", unsafe_allow_html=True)
     c1, c2 = st.columns([1, 1.5])
     with c1:
-        st.markdown("#### 🎯 解析信頼度 (中央値±1の含有率)")
-        if len(res["raw_samples"]) > 1:
+        st.markdown("#### 🎯 解析確信度 (中央値±1の含有率)")
+        if ANALYSIS_TRIALS > 1:
             for key, cent_val in res["confidences"].items():
                 st.write(f"**{key}**: {cent_val:.0f}% Match")
                 st.progress(cent_val / 100)
-        else: st.caption("※サンプル不足のため信頼度を算出できません")
+        else: st.caption("※シングル試行モード")
     
     with c2:
         with st.expander("🔍 生データ（Raw Sampling Data）"):
@@ -260,6 +243,13 @@ else:
     st.info(res.get("input_text", "データがありません"))
     st.markdown("</div>", unsafe_allow_html=True)
 
+    # 印刷ボタン
+    if st.button("🖨️ この結果を印刷する", key="print_btn"):
+        st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
+
     if st.button("🔄 新しい文章を解析する", key="reset_btn"):
         st.session_state.diagnosis = None
         st.rerun()
+
+# --- 入力内容 ---
+# st.write(f"解析対象テキスト: {input_text}")
