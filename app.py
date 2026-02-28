@@ -77,7 +77,7 @@ if not st.session_state.auth:
             st.markdown("""
                 <div style='font-size: 0.85rem; color: #374151;'>
                     <p style='color: #1e3a8a; font-weight: bold; margin-top: 10px;'>■ アプリの概要</p>
-                    <ul><li>Eric Berne氏の“交流分析”に基づき、AIが文章内容から自動でエゴグラムを推定します。</li></ul>
+                    <ul><li>Eric Berne氏の“交流分析”に基づき、AIが対人関係の心理パターンを自動分析します。</li></ul>
                     <p style='color: #1e3a8a; font-weight: bold;'>■ 使い方</p>
                     <ul>
                         <li>ログイン：パスワードを入力して分析画面へ。</li>
@@ -151,10 +151,10 @@ def run_full_diagnosis(text, gender, age):
     for key in ["CP", "NP", "A", "FC", "AC"]:
         vals = [int(round(float(s.get(key, 0)))) for s in raw_scores_list]
         
-        # 数値は「最頻値（mode）」を採用（複数ある場合は最小値を選択）
+        # 数値は「最頻値（mode）」を採用
         final_scores[key] = float(statistics.multimode(vals)[0])
         
-        # 信頼度は「中央値（median）」基準のまま維持
+        # 信頼度は「中央値（median）」基準
         median_val = statistics.median(vals)
         count_in_range = sum(1 for v in vals if (median_val - 1) <= v <= (median_val + 1))
         confidences[key] = (count_in_range / ANALYSIS_TRIALS) * 100
@@ -202,12 +202,14 @@ else:
             if st.button("🔊", help="結果を読み上げる"):
                 st.components.v1.html(f"""
                     <script>
-                    var msg = new SpeechSynthesisUtterance();
-                    msg.text = "{speech_text}";
-                    msg.lang = 'ja-JP';
-                    msg.rate = 1.0;
-                    window.speechSynthesis.cancel();
-                    window.speechSynthesis.speak(msg);
+                    window.onload = function() {{
+                        var msg = new SpeechSynthesisUtterance();
+                        msg.text = "{speech_text}";
+                        msg.lang = 'ja-JP';
+                        msg.rate = 1.0;
+                        window.speechSynthesis.cancel();
+                        window.speechSynthesis.speak(msg);
+                    }};
                     </script>
                 """, height=0)
 
