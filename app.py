@@ -245,7 +245,11 @@ else:
 
     # 印刷ボタン
     if st.button("🖨️ この結果を印刷する", key="print_btn"):
-        st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
+        st.components.v1.html("""
+            <script>
+            window.parent.print();
+            </script>
+        """, height=0)
 
     if st.button("🔄 新しい文章を解析する", key="reset_btn"):
         st.session_state.diagnosis = None
