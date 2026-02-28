@@ -42,7 +42,7 @@ st.markdown("""
 if 'auth' not in st.session_state: st.session_state.auth = False
 if 'diagnosis' not in st.session_state: st.session_state.diagnosis = None
 
-ANALYSIS_TRIALS = 5
+ANALYSIS_TRIALS = 1
 
 # --- 2. 認証・トップページ ---
 if not st.session_state.auth:
