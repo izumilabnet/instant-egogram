@@ -77,7 +77,7 @@ if not st.session_state.auth:
             st.markdown("""
                 <div style='font-size: 0.85rem; color: #374151;'>
                     <p style='color: #1e3a8a; font-weight: bold; margin-top: 10px;'>■ アプリの概要</p>
-                    <ul><li>Eric Berne氏の“交流分析”に基づき、AIが対人関係の心理パターンを自動分析します。</li></ul>
+                    <ul><li>Eric Berne氏の“交流分析”に基づき、AIが文章内容から自動でエゴグラムを推定します。</li></ul>
                     <p style='color: #1e3a8a; font-weight: bold;'>■ 使い方</p>
                     <ul>
                         <li>ログイン：パスワードを入力して分析画面へ。</li>
