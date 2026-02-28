@@ -10,7 +10,7 @@ import statistics
 import time
 
 # --- 0. 解析回数設定（開発時:1 / 運用時:5） ---
-ANALYSIS_TRIALS = 1 
+ANALYSIS_TRIALS = 5 
 
 # --- 1. ページ設定とスタイル ---
 st.set_page_config(page_title="INSTANT EGOGRAM", layout="wide")
@@ -43,7 +43,7 @@ if 'diagnosis' not in st.session_state: st.session_state.diagnosis = None
 # --- 2. 認証・トップページ ---
 if not st.session_state.auth:
     st.markdown("<h1 class='main-title'>インスタント・エゴグラム</h1>", unsafe_allow_html=True)
-    st.markdown("<p class='main-subtitle'>〜 交流分析理論に基づく自己理解ツール 〜</p>", unsafe_allow_html=True)
+    st.markdown("<p class='main-subtitle'>〜 交流分析に基づく自己理解ツール 〜</p>", unsafe_allow_html=True)
 
     col_top_1, col_top_2, col_top_3 = st.columns([1, 2, 1])
     
@@ -117,7 +117,7 @@ def get_single_analysis(text, gender, age, client):
         "特徴": "...", 
         "適職": "...", 
         "恋愛のアドバイス": "...",
-        "成長へ向けて": "今のエゴグラムが人生で積み上げた大切な個性であることを肯定する文章から始め、無理なく成長するための方向性を250字程度で具体的に記述してください"
+        "成長へ向けて": "入力された性別、年齢を考慮しながら、今のエゴグラムが人生で積み上げた大切な個性であることを肯定する文章から始め、無理なく成長するための方向性を250字程度で具体的に記述してください"
     }}
     """
     try:
@@ -165,13 +165,13 @@ def run_full_diagnosis(text, gender, age):
     }
 
 # --- 4. メイン画面（認証後） ---
-st.markdown("<h1 class='main-title'>INSTANT EGOGRAM PRO</h1>", unsafe_allow_html=True)
+st.markdown("<h1 class='main-title'>INSTANT EGOGRAM</h1>", unsafe_allow_html=True)
 
 if st.session_state.diagnosis is None:
     with st.sidebar:
         gender = st.selectbox("性別", ["", "男性", "女性", "その他", "回答しない"], index=0)
         age = st.selectbox("年齢", ["", "10代", "20代", "30代", "40代", "50代", "60代", "70代以上"], index=0)
-        st.info("独立推論の結果から『中央値』を特定し、その集中度を信頼度として算出します。")
+        st.info("独立推論を5回行い、その結果から『最頻値』を特定し、エゴグラムを描きます。")
 
     input_text = st.text_area("Analysis Text", height=200, key="main_input", label_visibility="collapsed")
 
@@ -225,7 +225,7 @@ else:
     st.markdown("<div class='res-card'>", unsafe_allow_html=True)
     c1, c2 = st.columns([1, 1.5])
     with c1:
-        st.markdown("#### 🎯 解析確信度 (中央値±1の含有率)")
+        st.markdown("#### 🎯 解析信頼度 (中央値±1の含有率)")
         if ANALYSIS_TRIALS > 1:
             for key, cent_val in res["confidences"].items():
                 st.write(f"**{key}**: {cent_val:.0f}% Match")
@@ -242,14 +242,6 @@ else:
     st.markdown("#### 📝 解析対象データ")
     st.info(res.get("input_text", "データがありません"))
     st.markdown("</div>", unsafe_allow_html=True)
-
-    # 印刷ボタン
-    if st.button("🖨️ この結果を印刷する", key="print_btn"):
-        st.components.v1.html("""
-            <script>
-            window.parent.print();
-            </script>
-        """, height=0)
 
     if st.button("🔄 新しい文章を解析する", key="reset_btn"):
         st.session_state.diagnosis = None
