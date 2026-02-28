@@ -10,7 +10,7 @@ import statistics
 import time
 
 # --- 0. 解析回数設定（開発時:1 / 運用時:5） ---
-ANALYSIS_TRIALS = 1 
+ANALYSIS_TRIALS = 5 
 
 # --- 1. ページ設定とスタイル ---
 st.set_page_config(page_title="INSTANT EGOGRAM", layout="wide")
@@ -189,7 +189,6 @@ else:
     
     with col1:
         st.markdown("<div class='res-card'>", unsafe_allow_html=True)
-        # ヘッダーと読み上げボタンのレイアウト
         head_col1, head_col2 = st.columns([4, 1])
         with head_col1:
             st.subheader("📊 心理特性プロファイル")
@@ -210,7 +209,7 @@ else:
         fig.add_trace(go.Bar(x=df['項目'], y=df['値'], marker_color='rgba(82, 183, 136, 0.3)', marker_line_color='#2d6a4f', marker_line_width=2))
         fig.add_trace(go.Scatter(x=df['項目'], y=df['値'], mode='lines+markers', line=dict(color='#ff7b72', width=4), marker=dict(size=10, color='#ff7b72')))
         fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="#2c3e50"), yaxis=dict(range=[-10.5, 10.5], zeroline=True), height=400, margin=dict(l=0, r=0, t=20, b=0), showlegend=False)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
         st.markdown("</div>", unsafe_allow_html=True)
 
     with col2:
@@ -225,9 +224,9 @@ else:
     with c1:
         st.markdown("#### 🎯 解析確信度 (中央値±1の含有率)")
         if ANALYSIS_TRIALS > 1:
-            for key, conf in res["confidences"].items():
-                st.write(f"**{key}**: {conf:.0f}% Match")
-                st.progress(conf / 100)
+            for key, cent_val in res["confidences"].items():
+                st.write(f"**{key}**: {cent_val:.0f}% Match")
+                st.progress(cent_val / 100)
         else: st.caption("※シングル試行モード")
     
     with c2:
