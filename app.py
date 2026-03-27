@@ -141,7 +141,6 @@ def run_full_diagnosis(text, gender, age):
         final_scores[ego] = {
             sub: statistics.mean(vals) for sub, vals in ego_scores.items()
         }
-        # 信頼度はPスコアのばらつきで代表算出
         p_vals = [round(v) for v in ego_scores["P"]]
         mode_val = statistics.multimode(p_vals)[0]
         confidences[ego] = (sum(1 for v in p_vals if abs(v - mode_val) <= 1) / ANALYSIS_TRIALS) * 100
@@ -193,39 +192,34 @@ else:
                 ">🔊</button>
             """, height=40)
 
-        # 3軸グラフ用データの構築
         plot_data = []
         for k, v in res["scores"].items():
             plot_data.append({
                 "項目": k,
-                "Total": v["P"] + v["M"],  # 全体のエネルギー量 (①+②)
-                "Positive": v["P"],        # 建設的な部分 (①)
-                "Block": -v["Z"]           # 不活性度 (③)
+                "Total": v["P"] + v["M"],
+                "Positive": v["P"],
+                "Block": -v["Z"]
             })
         df = pd.DataFrame(plot_data)
 
         fig = go.Figure()
 
-        # ① 全体のエネルギー量（外枠：薄いグレー）
         fig.add_trace(go.Bar(
             x=df['項目'], y=df['Total'], name='全体のエネルギー量(①+②)',
             marker_color='rgba(209, 213, 219, 0.3)', marker_line_color='#9ca3af', marker_line_width=1, width=0.6
         ))
 
-        # エゴグラムの折れ線（Totalの頂点を結ぶ）
         fig.add_trace(go.Scatter(
             x=df['項目'], y=df['Total'], name='エゴグラム波形',
             mode='lines+markers', line=dict(color='#2d6a4f', width=2),
             marker=dict(size=8, symbol='circle')
         ))
 
-        # ② 建設的な活用（内棒：緑）
         fig.add_trace(go.Bar(
             x=df['項目'], y=df['Positive'], name='建設的な活用(①)',
             marker_color='rgba(52, 211, 153, 0.8)', width=0.4
         ))
         
-        # ③ 不活性度（マイナス側：赤）
         fig.add_trace(go.Bar(
             x=df['項目'], y=df['Block'], name='不活性度(③)',
             marker_color='rgba(239, 68, 68, 0.5)', width=0.4
