@@ -70,14 +70,14 @@ if not st.session_state.auth:
             st.markdown("""
                 <div style='font-size: 0.85rem; color: #374151;'>
                     <p style='color: #1e3a8a; font-weight: bold; margin-top: 10px;'>■ アプリの概要</p>
-                    <ul><li>Eric Berne氏の“交流分析”に基づき、AIが対人関係の心理パターンを自動分析します。</li><li>入力した文章に対し分析を5回行い、その平均的な傾向を算出しています。信頼度は回答の収束度合いで決めています。</li><li>このアプリでは、各自我状態を「建設的(+)」「破壊的(-)」「不活性(0)」の3次元で解析し、エネルギーの量と質を同時に可視化します。</li></ul>
+                    <ul><li>Eric Berne氏の“交流分析”に基づき、AIが対人関係の心理パターンを自動分析します。</li><li>入力した文章に対し分析を5回行い、その中の最頻値を各自我状態に採用しています。信頼度はそのばらつきの度合いで決めています。</li><li>このアプリでは、新しい試みとして、各自我状態の「正負」に着目していますが、スコアがマイナスの場合は、単なる「欠由」ではなく「反転したエネルギー（例：NPなら冷徹、ACなら反抗心）」として解釈してください。</li></ul>
                     <p style='color: #1e3a8a; font-weight: bold;'>■ 使い方</p>
                     <ul>
                         <li>ログイン：パスワードを入力して分析画面へ。</li>
                         <li>属性選択：対象の性別と年齢を選択。</li>
                         <li>内容入力：文章を具体的（100〜300字）に入力。</li>
                         <li>分析実行：ボタン押下後、スキャンが開始されます。</li>
-                        <li>グラフの「活動量」は表出の強さ、「適応度」は適切さを表します。</li>
+                        <li>グラフの形が崩れた時、ダブルタップすると戻ります。</li>
                     </ul>
                     <p style='color: #b91c1c; font-weight: bold;'>■ ⚠️ 注意事項</p>
                     <ul>
@@ -94,12 +94,7 @@ if not st.session_state.auth:
 # --- 3. 分析エンジン ---
 def get_single_analysis(text, gender, age, client):
     model_id = "gemini-2.5-flash"
-    prompt_content = f"""属性: {age}、{gender}。対象文章: '{text}' 
-    エゴグラムの5つの自我状態(CP,NP,A,FC,AC)について、以下の3要素を0〜10で算出せよ。
-    - P: 建設的・望ましい思考・行動（光）
-    - M: 破壊的・望ましくない思考・行動（影）
-    - Z: 欠乏・不活性な状態（無）
-    必ずJSON形式のみで回答し、回答構成: {{"scores": {{"CP":{{"P":0,"M":0,"Z":0}}, "NP":{{"P":0,"M":0,"Z":0}}, "A":{{"P":0,"M":0,"Z":0}}, "FC":{{"P":0,"M":0,"Z":0}}, "AC":{{"P":0,"M":0,"Z":0}}}}, "性格類型": "...", "特徴": "...", "適職": "...", "恋愛のアドバイス": "...", "成長へ向けて": "..."}}"""
+    prompt_content = f"属性: {age}、{gender}。対象文章: '{text}' エゴグラム(CP,NP,A,FC,AC)を-10〜10で算出し性格診断せよ。必ずJSON形式のみで回答し、回答構成: {{\"scores\": {{\"CP\":0, \"NP\":0, \"A\":0, \"FC\":0, \"AC\":0}}, \"性格類型\": \"...\", \"特徴\": \"...\", \"適職\": \"...\", \"恋愛のアドバイス\": \"...\", \"成長へ向けて\": \"...\"}}"
     try:
         response = client.models.generate_content(
             model=model_id, contents=prompt_content,
@@ -116,49 +111,30 @@ def run_full_diagnosis(text, gender, age):
     progress_text = st.empty()
     my_bar = st.progress(0)
     
-    # 改善：5回成功するまで最大8回試行
-    max_attempts = 8
-    attempt_count = 0
-    
-    while len(all_results) < ANALYSIS_TRIALS and attempt_count < max_attempts:
-        attempt_count += 1
-        success_count = len(all_results)
-        
-        progress_text.markdown(f"<p style='color: #2d6a4f; font-size: 0.9rem;'>Analyzing psychological vectors... (Success: {success_count}/{ANALYSIS_TRIALS}, Attempt: {attempt_count})</p>", unsafe_allow_html=True)
-        
+    for i in range(ANALYSIS_TRIALS):
+        progress_text.markdown(f"<p style='color: #2d6a4f; font-size: 0.9rem;'>Analyzing psychological vectors... ({i+1} / {ANALYSIS_TRIALS})</p>", unsafe_allow_html=True)
         res = get_single_analysis(text, gender, age, client)
-        if res:
-            all_results.append(res)
-            my_bar.progress(len(all_results) / ANALYSIS_TRIALS)
-        
-        # 改善：タイマーを入れてAPI負荷を軽減し、素通りを防ぐ
-        time.sleep(0.6)
+        if res: all_results.append(res)
+        my_bar.progress((i + 1) / ANALYSIS_TRIALS)
+        time.sleep(0.1)
     
     progress_text.empty()
     my_bar.empty()
     if not all_results: return None
 
-    # 各要素ごとの集計ロジック
     final_scores = {}
     confidences = {}
-    
-    for ego in ["CP", "NP", "A", "FC", "AC"]:
-        ego_scores = {"P": [], "M": [], "Z": []}
-        for r in all_results:
-            for sub in ["P", "M", "Z"]:
-                val = r["scores"].get(ego, {}).get(sub, 0)
-                ego_scores[sub].append(val)
-        
-        final_scores[ego] = {
-            sub: statistics.mean(vals) for sub, vals in ego_scores.items()
-        }
-        p_vals = [round(v) for v in ego_scores["P"]]
-        mode_val = statistics.multimode(p_vals)[0]
-        confidences[ego] = (sum(1 for v in p_vals if abs(v - mode_val) <= 1) / len(all_results)) * 100
+    raw_scores_list = [r["scores"] for r in all_results]
+    for key in ["CP", "NP", "A", "FC", "AC"]:
+        vals = [int(round(float(s.get(key, 0)))) for s in raw_scores_list]
+        final_scores[key] = float(statistics.multimode(vals)[0])
+        median_val = statistics.median(vals)
+        count_in_range = sum(1 for v in vals if (median_val - 1) <= v <= (median_val + 1))
+        confidences[key] = (count_in_range / ANALYSIS_TRIALS) * 100
 
     base_res = all_results[0]
     return {
-        "scores": final_scores, "confidences": confidences, "raw_samples": [r["scores"] for r in all_results],
+        "scores": final_scores, "confidences": confidences, "raw_samples": raw_scores_list,
         "性格類型": base_res.get("性格類型", ""), "特徴": base_res.get("特徴", ""),
         "適職": base_res.get("適職", ""), "恋愛のアドバイス": base_res.get("恋愛のアドバイス", ""),
         "成長へ向けて": base_res.get("成長へ向けて", ""), "input_text": text
@@ -187,7 +163,7 @@ else:
         head_col1, head_col2 = st.columns([4, 1])
         with head_col1: st.subheader("📊 あなたのエゴグラム")
         with head_col2:
-            speech_msg = f"診断結果は、{res['性格類型']}です。".replace('"', '”')
+            speech_msg = f"診断結果は、{res['性格類型']}です。特徴。{res['特徴']}。成長へ向けて。{res['成長へ向けて']}。適職。{res['適職']}。恋愛のアドバイス。{res['恋愛のアドバイス']}".replace('"', '”').replace('\n', ' ')
             st.components.v1.html(f"""
                 <button class="tts-btn" onclick="
                     const synth = window.speechSynthesis;
@@ -203,53 +179,22 @@ else:
                 ">🔊</button>
             """, height=40)
 
-        plot_data = []
-        for k, v in res["scores"].items():
-            plot_data.append({
-                "項目": k,
-                "Total": v["P"] + v["M"],
-                "Positive": v["P"],
-                "Block": -v["Z"]
-            })
-        df = pd.DataFrame(plot_data)
-
+        df = pd.DataFrame(list(res["scores"].items()), columns=['項目', '値'])
         fig = go.Figure()
-
-        fig.add_trace(go.Bar(
-            x=df['項目'], y=df['Total'], name='全体のエネルギー量(①+②)',
-            marker_color='rgba(209, 213, 219, 0.3)', marker_line_color='#9ca3af', marker_line_width=1, width=0.6
-        ))
-
-        fig.add_trace(go.Scatter(
-            x=df['項目'], y=df['Total'], name='エゴグラム波形',
-            mode='lines+markers', line=dict(color='#2d6a4f', width=2),
-            marker=dict(size=8, symbol='circle')
-        ))
-
-        fig.add_trace(go.Bar(
-            x=df['項目'], y=df['Positive'], name='建設的な活用(①)',
-            marker_color='rgba(52, 211, 153, 0.8)', width=0.4
-        ))
-        
-        fig.add_trace(go.Bar(
-            x=df['項目'], y=df['Block'], name='不活性度(③)',
-            marker_color='rgba(239, 68, 68, 0.5)', width=0.4
-        ))
-
+        fig.add_trace(go.Bar(x=df['項目'], y=df['値'], marker_color='rgba(82, 183, 136, 0.3)', marker_line_color='#2d6a4f', marker_line_width=2))
+        fig.add_trace(go.Scatter(x=df['項目'], y=df['値'], mode='lines+markers', line=dict(color='#ff7b72', width=4), marker=dict(size=10, color='#ff7b72')))
         fig.update_layout(
-            barmode='overlay',
             paper_bgcolor='rgba(0,0,0,0)', 
             plot_bgcolor='rgba(0,0,0,0)', 
             font=dict(color="#2c3e50"), 
-            yaxis=dict(range=[-10.5, 20.5], zeroline=True, fixedrange=True), 
+            yaxis=dict(range=[-10.5, 10.5], zeroline=True, fixedrange=True), 
             xaxis=dict(fixedrange=True),
-            height=450, 
+            height=400, 
             margin=dict(l=0, r=0, t=20, b=0), 
-            showlegend=True,
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            showlegend=False,
             dragmode=False
         )
-        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False, 'staticPlot': False, 'scrollZoom': False})
         
         conf_html = "".join([f"<span style='margin-right:15px;'>{k}: {v:.0f}%</span>" for k, v in res["confidences"].items()])
         st.markdown(f"<div style='font-size: 0.75rem; color: #6b7280; text-align: center; border-top: 1px solid #eee; padding-top: 8px;'>信頼度: {conf_html}</div>", unsafe_allow_html=True)
@@ -263,17 +208,9 @@ else:
         st.markdown("</div>", unsafe_allow_html=True)
 
         with st.expander("🛠️ 解析データをすべて表示"):
-            ego_labels = ["CP", "NP", "A", "FC", "AC"]
-            rows = []
-            for i, sample in enumerate(res["raw_samples"]):
-                row = {label: round(sample[label]["P"] + sample[label]["M"], 2) for label in ego_labels}
-                row_name = f"{i+1}回目"
-                rows.append(pd.Series(row, name=row_name))
-            
-            if rows:
-                detail_df = pd.concat(rows, axis=1).T
-                st.table(detail_df)
-                st.caption(f"※各自我状態における「活動量（①+②）」の独立試行データを表示しています。")
+            raw_df = pd.DataFrame(res["raw_samples"])
+            st.dataframe(raw_df, use_container_width=True)
+            st.caption(f"※全{ANALYSIS_TRIALS}回の独立試行スコアを表示しています。")
 
     st.markdown("<div class='res-card'>", unsafe_allow_html=True)
     st.markdown("<p style='font-size: 0.85rem; font-weight: bold; color: #2d6a4f; margin-bottom: 5px;'>📝 解析対象の文章</p>", unsafe_allow_html=True)
