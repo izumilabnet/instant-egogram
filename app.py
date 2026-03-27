@@ -116,12 +116,23 @@ def run_full_diagnosis(text, gender, age):
     progress_text = st.empty()
     my_bar = st.progress(0)
     
-    for i in range(ANALYSIS_TRIALS):
-        progress_text.markdown(f"<p style='color: #2d6a4f; font-size: 0.9rem;'>Analyzing psychological vectors... ({i+1} / {ANALYSIS_TRIALS})</p>", unsafe_allow_html=True)
+    # 改善：5回成功するまで最大8回試行
+    max_attempts = 8
+    attempt_count = 0
+    
+    while len(all_results) < ANALYSIS_TRIALS and attempt_count < max_attempts:
+        attempt_count += 1
+        success_count = len(all_results)
+        
+        progress_text.markdown(f"<p style='color: #2d6a4f; font-size: 0.9rem;'>Analyzing psychological vectors... (Success: {success_count}/{ANALYSIS_TRIALS}, Attempt: {attempt_count})</p>", unsafe_allow_html=True)
+        
         res = get_single_analysis(text, gender, age, client)
-        if res: all_results.append(res)
-        my_bar.progress((i + 1) / ANALYSIS_TRIALS)
-        time.sleep(0.3)
+        if res:
+            all_results.append(res)
+            my_bar.progress(len(all_results) / ANALYSIS_TRIALS)
+        
+        # 改善：タイマーを入れてAPI負荷を軽減し、素通りを防ぐ
+        time.sleep(0.6)
     
     progress_text.empty()
     my_bar.empty()
@@ -143,7 +154,7 @@ def run_full_diagnosis(text, gender, age):
         }
         p_vals = [round(v) for v in ego_scores["P"]]
         mode_val = statistics.multimode(p_vals)[0]
-        confidences[ego] = (sum(1 for v in p_vals if abs(v - mode_val) <= 1) / ANALYSIS_TRIALS) * 100
+        confidences[ego] = (sum(1 for v in p_vals if abs(v - mode_val) <= 1) / len(all_results)) * 100
 
     base_res = all_results[0]
     return {
@@ -259,9 +270,10 @@ else:
                 row_name = f"{i+1}回目"
                 rows.append(pd.Series(row, name=row_name))
             
-            detail_df = pd.concat(rows, axis=1).T
-            st.table(detail_df)
-            st.caption(f"※各自我状態における「活動量（①+②）」の独立試行データを表示しています。")
+            if rows:
+                detail_df = pd.concat(rows, axis=1).T
+                st.table(detail_df)
+                st.caption(f"※各自我状態における「活動量（①+②）」の独立試行データを表示しています。")
 
     st.markdown("<div class='res-card'>", unsafe_allow_html=True)
     st.markdown("<p style='font-size: 0.85rem; font-weight: bold; color: #2d6a4f; margin-bottom: 5px;'>📝 解析対象の文章</p>", unsafe_allow_html=True)
