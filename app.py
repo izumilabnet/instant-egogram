@@ -258,8 +258,11 @@ else:
         st.markdown("</div>", unsafe_allow_html=True)
 
         with st.expander("🛠️ 解析データをすべて表示"):
-            st.write(res["scores"])
-            st.caption(f"※全{ANALYSIS_TRIALS}回の試行に基づく平均値を表示しています。")
+            ego_labels = ["CP", "NP", "A", "FC", "AC"]
+            summary_data = {label: [round(res["scores"][label]["P"] + res["scores"][label]["M"], 2)] for label in ego_labels}
+            summary_df = pd.DataFrame(summary_data, index=["活動量 (①+②)"])
+            st.table(summary_df)
+            st.caption(f"※全{ANALYSIS_TRIALS}回の試行に基づく平均スコアを表示しています。")
 
     st.markdown("<div class='res-card'>", unsafe_allow_html=True)
     st.markdown("<p style='font-size: 0.85rem; font-weight: bold; color: #2d6a4f; margin-bottom: 5px;'>📝 解析対象の文章</p>", unsafe_allow_html=True)
