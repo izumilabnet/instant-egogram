@@ -121,7 +121,7 @@ def run_full_diagnosis(text, gender, age):
         res = get_single_analysis(text, gender, age, client)
         if res: all_results.append(res)
         my_bar.progress((i + 1) / ANALYSIS_TRIALS)
-        time.sleep(0.1)
+        time.sleep(0.3)
     
     progress_text.empty()
     my_bar.empty()
@@ -177,7 +177,7 @@ else:
         head_col1, head_col2 = st.columns([4, 1])
         with head_col1: st.subheader("📊 あなたのエゴグラム")
         with head_col2:
-            speech_msg = f"診断結果は、{res['性格類型']}です。特徴。{res['特徴']}。成長へ向けて。{res['成長へ向けて']}。適職。{res['適職']}。恋愛のアドバイス。{res['恋愛のアドバイス']}".replace('"', '”').replace('\n', ' ')
+            speech_msg = f"診断結果は、{res['性格類型']}です。".replace('"', '”')
             st.components.v1.html(f"""
                 <button class="tts-btn" onclick="
                     const synth = window.speechSynthesis;
@@ -193,32 +193,32 @@ else:
                 ">🔊</button>
             """, height=40)
 
-        # 3軸グラフ用データの構築
+        # 3軸グラフ用データの構築（①＋②の外枠の中に①を重ねる）
         plot_data = []
         for k, v in res["scores"].items():
             plot_data.append({
                 "項目": k,
-                "Volume": v["P"] + v["M"],
-                "Quality": v["P"] - v["M"],
-                "Block": -v["Z"]
+                "Total": v["P"] + v["M"],  # 全体のエネルギー量 (①+②)
+                "Positive": v["P"],        # 建設的な部分 (①)
+                "Block": -v["Z"]           # 不活性度 (③)
             })
         df = pd.DataFrame(plot_data)
 
         fig = go.Figure()
-        # ①+② 活動量（外枠）
+        # ① 全体のエネルギー量（外枠：薄いグレー）
         fig.add_trace(go.Bar(
-            x=df['項目'], y=df['Volume'], name='活動量(①+②)',
-            marker_color='rgba(82, 183, 136, 0.2)', marker_line_color='#2d6a4f', marker_line_width=1
+            x=df['項目'], y=df['Total'], name='全体のエネルギー量(①+②)',
+            marker_color='rgba(209, 213, 219, 0.3)', marker_line_color='#9ca3af', marker_line_width=1, width=0.6
         ))
-        # ①-② 適応度（芯）
+        # ② 建設的な活用（内棒：緑）
         fig.add_trace(go.Bar(
-            x=df['項目'], y=df['Quality'], name='適応度(①-②)',
-            marker_color='rgba(45, 106, 79, 0.8)', width=0.4
+            x=df['項目'], y=df['Positive'], name='建設的な活用(①)',
+            marker_color='rgba(52, 211, 153, 0.8)', width=0.4
         ))
-        # ③ 不活性度（マイナス側）
+        # ③ 不活性度（マイナス側：赤）
         fig.add_trace(go.Bar(
             x=df['項目'], y=df['Block'], name='不活性度(③)',
-            marker_color='rgba(239, 68, 68, 0.5)'
+            marker_color='rgba(239, 68, 68, 0.5)', width=0.4
         ))
 
         fig.update_layout(
@@ -228,7 +228,7 @@ else:
             font=dict(color="#2c3e50"), 
             yaxis=dict(range=[-10.5, 20.5], zeroline=True, fixedrange=True), 
             xaxis=dict(fixedrange=True),
-            height=400, 
+            height=450, 
             margin=dict(l=0, r=0, t=20, b=0), 
             showlegend=True,
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
