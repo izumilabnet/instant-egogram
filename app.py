@@ -193,7 +193,7 @@ else:
                 ">🔊</button>
             """, height=40)
 
-        # 3軸グラフ用データの構築（①＋②の外枠の中に①を重ねる）
+        # 3軸グラフ用データの構築
         plot_data = []
         for k, v in res["scores"].items():
             plot_data.append({
@@ -205,16 +205,26 @@ else:
         df = pd.DataFrame(plot_data)
 
         fig = go.Figure()
+
         # ① 全体のエネルギー量（外枠：薄いグレー）
         fig.add_trace(go.Bar(
             x=df['項目'], y=df['Total'], name='全体のエネルギー量(①+②)',
             marker_color='rgba(209, 213, 219, 0.3)', marker_line_color='#9ca3af', marker_line_width=1, width=0.6
         ))
+
+        # エゴグラムの折れ線（Totalの頂点を結ぶ）
+        fig.add_trace(go.Scatter(
+            x=df['項目'], y=df['Total'], name='エゴグラム波形',
+            mode='lines+markers', line=dict(color='#2d6a4f', width=2),
+            marker=dict(size=8, symbol='circle')
+        ))
+
         # ② 建設的な活用（内棒：緑）
         fig.add_trace(go.Bar(
             x=df['項目'], y=df['Positive'], name='建設的な活用(①)',
             marker_color='rgba(52, 211, 153, 0.8)', width=0.4
         ))
+        
         # ③ 不活性度（マイナス側：赤）
         fig.add_trace(go.Bar(
             x=df['項目'], y=df['Block'], name='不活性度(③)',
