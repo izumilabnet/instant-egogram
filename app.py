@@ -70,7 +70,7 @@ if not st.session_state.auth:
             st.markdown("""
                 <div style='font-size: 0.85rem; color: #374151;'>
                     <p style='color: #1e3a8a; font-weight: bold; margin-top: 10px;'>■ アプリの概要</p>
-                    <ul><li>Eric Berne氏の“交流分析”に基づき、AIが対人関係の心理パターンを自動分析します。</li><li>入力した文章に対し分析を5回行い、その平均的な傾向を算出しています。信頼度は回答の収束度合いで決めています。</li><li>このアプリでは、各自我状態を「建設的(+)」「破壊的(-)」「不活性(0)」の3次元で解析し、エネルギーの量と質を同時に可視化します。</li></ul>
+                    <ul><li>Eric Berne氏の“交流分析”に基づき、AIが対人関係の心理パターンを自動分析します。</li><li>入力した文章に対し分析を5回行い、その中の最頻値を各自我状態に採用しています。信頼度はそのばらつきの度合いで決めています。</li><li>このアプリでは、各自我状態を「建設的(+)」「破壊的(-)」「不活性(0)」の3次元で解析し、エネルギーの量と質を同時に可視化します。</li></ul>
                     <p style='color: #1e3a8a; font-weight: bold;'>■ 使い方</p>
                     <ul>
                         <li>ログイン：パスワードを入力して分析画面へ。</li>
@@ -121,7 +121,7 @@ def run_full_diagnosis(text, gender, age):
         res = get_single_analysis(text, gender, age, client)
         if res: all_results.append(res)
         my_bar.progress((i + 1) / ANALYSIS_TRIALS)
-        time.sleep(5.0)
+        time.sleep(3.0)
     
     progress_text.empty()
     my_bar.empty()
@@ -133,18 +133,26 @@ def run_full_diagnosis(text, gender, age):
     
     for ego in ["CP", "NP", "A", "FC", "AC"]:
         ego_scores = {"P": [], "M": [], "Z": []}
+        activity_vals = [] # 活動量(P+M)の推移用
         for r in all_results:
-            for sub in ["P", "M", "Z"]:
-                val = r["scores"].get(ego, {}).get(sub, 0)
-                ego_scores[sub].append(val)
+            p_val = r["scores"].get(ego, {}).get("P", 0)
+            m_val = r["scores"].get(ego, {}).get("M", 0)
+            z_val = r["scores"].get(ego, {}).get("Z", 0)
+            ego_scores["P"].append(p_val)
+            ego_scores["M"].append(m_val)
+            ego_scores["Z"].append(z_val)
+            activity_vals.append(round(float(p_val + m_val)))
         
+        # 代表値の決定: 最頻値を採用
         final_scores[ego] = {
-            sub: statistics.mean(vals) for sub, vals in ego_scores.items()
+            sub: float(statistics.multimode([round(float(v)) for v in vals])[0])
+            for sub, vals in ego_scores.items()
         }
-        # 信頼度はPスコアのばらつきで代表算出
-        p_vals = [round(v) for v in ego_scores["P"]]
-        mode_val = statistics.multimode(p_vals)[0]
-        confidences[ego] = (sum(1 for v in p_vals if abs(v - mode_val) <= 1) / ANALYSIS_TRIALS) * 100
+        
+        # 信頼度の計算: 中央値(median)から ±1 の範囲に収まった回数の割合
+        median_val = statistics.median(activity_vals)
+        count_in_range = sum(1 for v in activity_vals if (median_val - 1) <= v <= (median_val + 1))
+        confidences[ego] = (count_in_range / ANALYSIS_TRIALS) * 100
 
     base_res = all_results[0]
     return {
