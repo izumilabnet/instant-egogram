@@ -174,19 +174,21 @@ def run_full_diagnosis(text, gender, age):
 st.markdown("<h1 class='main-title'>INSTANT EGOGRAM PRO</h1>", unsafe_allow_html=True)
 
 if st.session_state.diagnosis is None:
-    col_input_1, col_input_2 = st.columns(2)
-    with col_input_1: gender = st.selectbox("性別", ["", "男性", "女性", "その他", "回答しない"], index=0)
-    with col_input_2: age = st.selectbox("年齢", ["", "10代", "20代", "30代", "40代", "50代", "60代", "70代以上"], index=0)
-    input_text = st.text_area("Analysis Text", height=200, key="main_input", label_visibility="collapsed", placeholder="分析する文章をここに入力してください")
-    
-    btn_label = "🚀 診断を開始" if not st.session_state.partial_results else f"🔄 診断を再開 ({len(st.session_state.partial_results)}/{ANALYSIS_TRIALS} 完了済み)"
-    if st.button(btn_label, key="diag_btn"):
-        if input_text:
-            result = run_full_diagnosis(input_text, gender, age)
-            if result:
-                st.session_state.diagnosis = result
-                st.rerun()
-        else: st.warning("文章を入力してください。")
+    _, center_col, _ = st.columns([1.5, 2, 1.5])
+    with center_col:
+        col_input_1, col_input_2 = st.columns(2)
+        with col_input_1: gender = st.selectbox("性別", ["", "男性", "女性", "その他", "回答しない"], index=0)
+        with col_input_2: age = st.selectbox("年齢", ["", "10代", "20代", "30代", "40代", "50代", "60代", "70代以上"], index=0)
+        input_text = st.text_area("Analysis Text", height=200, key="main_input", label_visibility="collapsed", placeholder="分析する文章をここに入力してください")
+        
+        btn_label = "🚀 診断を開始" if not st.session_state.partial_results else f"🔄 診断を再開 ({len(st.session_state.partial_results)}/{ANALYSIS_TRIALS} 完了済み)"
+        if st.button(btn_label, key="diag_btn"):
+            if input_text:
+                result = run_full_diagnosis(input_text, gender, age)
+                if result:
+                    st.session_state.diagnosis = result
+                    st.rerun()
+            else: st.warning("文章を入力してください。")
 else:
     res = st.session_state.diagnosis
     col1, col2 = st.columns([1.2, 1])
@@ -195,7 +197,7 @@ else:
         head_col1, head_col2 = st.columns([4, 1])
         with head_col1: st.subheader("📊 あなたのエゴグラム")
         with head_col2:
-            speech_msg = f"診断結果は、{res['性格類型']}です。".replace('"', '”')
+            speech_msg = f"診断結果は、{res['性格類型']}です。特徴。{res['特徴']}。成長へ向けて。{res['成長へ向けて']}。適職。{res['適職']}。恋愛のアドバイス。{res['恋愛のアドバイス']}".replace('"', '”').replace('\n', ' ')
             st.components.v1.html(f"""
                 <button class="tts-btn" onclick="
                     const synth = window.speechSynthesis;
@@ -215,22 +217,17 @@ else:
         df = pd.DataFrame(plot_data)
         fig = go.Figure()
         
-        # 描画順を守りつつ、凡例の並び順を制御
-        # 1. 背面：非建設的な活用（オレンジ・赤み増強） -> 凡例2番目
         fig.add_trace(go.Bar(x=df['項目'], y=df['Total'], name='非建設的な活用', 
                              marker_color='rgba(255, 69, 0, 0.4)', marker_line_color='#FF4500', 
                              marker_line_width=1, width=0.6, legendrank=20))
         
-        # 2. 中面：エゴグラム波形（折れ線） -> 凡例3番目
         fig.add_trace(go.Scatter(x=df['項目'], y=df['Total'], name='エゴグラム波形', 
                                  mode='lines+markers', line=dict(color='#2d6a4f', width=2), 
                                  marker=dict(size=8, symbol='circle'), legendrank=30))
         
-        # 3. 前面：建設的な活用 -> 凡例1番目
         fig.add_trace(go.Bar(x=df['項目'], y=df['Positive'], name='建設的な活用', 
                              marker_color='rgba(33, 150, 243, 0.8)', width=0.6, legendrank=10))
         
-        # 4. 前面：非活用 -> 凡例4番目
         fig.add_trace(go.Bar(x=df['項目'], y=df['Block'], name='非活用', 
                              marker_color='rgba(158, 158, 158, 0.5)', width=0.6, legendrank=40))
 
