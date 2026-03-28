@@ -211,13 +211,23 @@ else:
                 ">🔊</button>
             """, height=40)
 
-        plot_data = [{"項目": k, "Total": v["P"] + v["M"], "Positive": v["P"], "Block": -v["Z"]} for k, v in res["scores"].items()]
+        plot_data = [{"項目": k, "Total": v["P"] + v["M"], "Positive": v["P"], "Negative": v["M"], "Block": -v["Z"]} for k, v in res["scores"].items()]
         df = pd.DataFrame(plot_data)
         fig = go.Figure()
-        fig.add_trace(go.Bar(x=df['項目'], y=df['Total'], name='全体のエネルギー量(①+②)', marker_color='rgba(255, 167, 38, 0.3)', marker_line_color='#ef6c00', marker_line_width=1, width=0.6))
-        fig.add_trace(go.Scatter(x=df['項目'], y=df['Total'], name='エゴグラム波形', mode='lines+markers', line=dict(color='#2d6a4f', width=2), marker=dict(size=8, symbol='circle')))
-        fig.add_trace(go.Bar(x=df['項目'], y=df['Positive'], name='建設的な活用(①)', marker_color='rgba(33, 150, 243, 0.8)', width=0.6))
-        fig.add_trace(go.Bar(x=df['項目'], y=df['Block'], name='不活性度(③)', marker_color='rgba(158, 158, 158, 0.5)', width=0.6))
+
+        # 指定の順序でトレースを追加
+        # 1. （青い□）建設的な活用①
+        fig.add_trace(go.Bar(x=df['項目'], y=df['Positive'], name='建設的な活用①', marker_color='rgba(33, 150, 243, 0.8)', width=0.6))
+        
+        # 2. （赤寄りのオレンジ□）非建設的な活用②
+        fig.add_trace(go.Bar(x=df['項目'], y=df['Negative'], name='非建設的な活用②', marker_color='rgba(255, 70, 0, 0.4)', marker_line_color='#d32f2f', marker_line_width=1, width=0.6))
+        
+        # 3. （グレーの□）非活用③
+        fig.add_trace(go.Bar(x=df['項目'], y=df['Block'], name='非活用③', marker_color='rgba(158, 158, 158, 0.5)', width=0.6))
+        
+        # 4. （折れ線のマーク）エゴグラム波形①+②
+        fig.add_trace(go.Scatter(x=df['項目'], y=df['Total'], name='エゴグラム波形①+②', mode='lines+markers', line=dict(color='#2d6a4f', width=2), marker=dict(size=8, symbol='circle')))
+        
         fig.update_layout(barmode='overlay', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="#2c3e50"), yaxis=dict(range=[-10.5, 20.5], zeroline=True, fixedrange=True), xaxis=dict(fixedrange=True), height=450, margin=dict(l=0, r=0, t=20, b=0), showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), dragmode=False)
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
         
