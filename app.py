@@ -199,17 +199,17 @@ else:
             plot_data.append({
                 "項目": k,
                 "Total": v["P"] + v["M"],  # 全体のエネルギー量 (①+②)
-                "Positive": v["P"],        # 建設的な部分 (①)
+                "Positive": v["P"],        # 建設的な活用 (①)
                 "Block": -v["Z"]           # 不活性度 (③)
             })
         df = pd.DataFrame(plot_data)
 
         fig = go.Figure()
 
-        # ① 全体のエネルギー量（外枠：薄いグレー）
+        # ① 全体のエネルギー量 (①+②) - 薄いオレンジ
         fig.add_trace(go.Bar(
             x=df['項目'], y=df['Total'], name='全体のエネルギー量(①+②)',
-            marker_color='rgba(209, 213, 219, 0.3)', marker_line_color='#9ca3af', marker_line_width=1, width=0.6
+            marker_color='rgba(255, 167, 38, 0.3)', marker_line_color='#ef6c00', marker_line_width=1, width=0.6
         ))
 
         # エゴグラムの折れ線（Totalの頂点を結ぶ）
@@ -219,16 +219,16 @@ else:
             marker=dict(size=8, symbol='circle')
         ))
 
-        # ② 建設的な活用（内棒：緑）
+        # ② 建設的な活用 (①) - 薄い青
         fig.add_trace(go.Bar(
             x=df['項目'], y=df['Positive'], name='建設的な活用(①)',
-            marker_color='rgba(52, 211, 153, 0.8)', width=0.4
+            marker_color='rgba(33, 150, 243, 0.8)', width=0.6
         ))
         
-        # ③ 不活性度（マイナス側：赤）
+        # ③ 不活性度 (③) - 灰色
         fig.add_trace(go.Bar(
             x=df['項目'], y=df['Block'], name='不活性度(③)',
-            marker_color='rgba(239, 68, 68, 0.5)', width=0.4
+            marker_color='rgba(158, 158, 158, 0.5)', width=0.6
         ))
 
         fig.update_layout(
@@ -258,8 +258,15 @@ else:
         st.markdown("</div>", unsafe_allow_html=True)
 
         with st.expander("🛠️ 解析データをすべて表示"):
-            st.write(res["scores"])
-            st.caption(f"※全{ANALYSIS_TRIALS}回の試行に基づく平均値を表示しています。")
+            # 各試行の「活動量（P+M）」を抽出してテーブル化
+            row_list = []
+            for i, sample in enumerate(res["raw_samples"]):
+                row = {k: (sample[k]["P"] + sample[k]["M"]) for k in ["CP", "NP", "A", "FC", "AC"]}
+                row_list.append(pd.Series(row, name=f"{i+1}回目"))
+            
+            raw_activity_df = pd.concat(row_list, axis=1).T
+            st.table(raw_activity_df)
+            st.caption(f"※各自我状態における「活動量（①+②）」の独立試行データを表示しています。")
 
     st.markdown("<div class='res-card'>", unsafe_allow_html=True)
     st.markdown("<p style='font-size: 0.85rem; font-weight: bold; color: #2d6a4f; margin-bottom: 5px;'>📝 解析対象の文章</p>", unsafe_allow_html=True)
