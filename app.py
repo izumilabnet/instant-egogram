@@ -115,7 +115,6 @@ def run_full_diagnosis(text, gender, age):
     if not api_key: return None
     client = genai.Client(api_key=api_key)
     
-    # 文章や属性が変わっていたら中間データをリセット
     current_input_hash = hash(f"{text}{gender}{age}")
     if st.session_state.last_input_hash != current_input_hash:
         st.session_state.partial_results = []
@@ -125,7 +124,6 @@ def run_full_diagnosis(text, gender, age):
     progress_text = st.empty()
     my_bar = st.progress(len(all_results) / ANALYSIS_TRIALS)
     
-    # 不足分だけループ
     start_count = len(all_results)
     for i in range(start_count, ANALYSIS_TRIALS):
         progress_text.markdown(f"<p style='color: #2d6a4f; font-size: 0.9rem;'>Analyzing psychological vectors... ({i+1} / {ANALYSIS_TRIALS})</p>", unsafe_allow_html=True)
@@ -136,14 +134,13 @@ def run_full_diagnosis(text, gender, age):
             return None
             
         all_results.append(res)
-        st.session_state.partial_results = all_results # 成功分を即保存
+        st.session_state.partial_results = all_results
         my_bar.progress((i + 1) / ANALYSIS_TRIALS)
         time.sleep(3.0)
     
     progress_text.empty()
     my_bar.empty()
     
-    # 完了後の集計
     final_scores = {}
     confidences = {}
     for ego in ["CP", "NP", "A", "FC", "AC"]:
@@ -165,7 +162,7 @@ def run_full_diagnosis(text, gender, age):
         confidences[ego] = (count_in_range / ANALYSIS_TRIALS) * 100
 
     base_res = all_results[0]
-    st.session_state.partial_results = [] # 完了したのでリセット
+    st.session_state.partial_results = []
     return {
         "scores": final_scores, "confidences": confidences, "raw_samples": [r["scores"] for r in all_results],
         "性格類型": base_res.get("性格類型", ""), "特徴": base_res.get("特徴", ""),
@@ -214,28 +211,18 @@ else:
                 ">🔊</button>
             """, height=40)
 
-        # 3軸グラフ用データの構築
-        plot_data = []
-        for k, v in res["scores"].items():
-            plot_data.append({
-                "項目": k,
-                "Total": v["P"] + v["M"],
-                "Positive": v["P"],
-                "Block": -v["Z"]
-            })
+        plot_data = [{"項目": k, "Total": v["P"] + v["M"], "Positive": v["P"], "Block": -v["Z"]} for k, v in res["scores"].items()]
         df = pd.DataFrame(plot_data)
-
         fig = go.Figure()
         fig.add_trace(go.Bar(x=df['項目'], y=df['Total'], name='全体のエネルギー量(①+②)', marker_color='rgba(255, 167, 38, 0.3)', marker_line_color='#ef6c00', marker_line_width=1, width=0.6))
         fig.add_trace(go.Scatter(x=df['項目'], y=df['Total'], name='エゴグラム波形', mode='lines+markers', line=dict(color='#2d6a4f', width=2), marker=dict(size=8, symbol='circle')))
         fig.add_trace(go.Bar(x=df['項目'], y=df['Positive'], name='建設的な活用(①)', marker_color='rgba(33, 150, 243, 0.8)', width=0.6))
         fig.add_trace(go.Bar(x=df['項目'], y=df['Block'], name='不活性度(③)', marker_color='rgba(158, 158, 158, 0.5)', width=0.6))
-
         fig.update_layout(barmode='overlay', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="#2c3e50"), yaxis=dict(range=[-10.5, 20.5], zeroline=True, fixedrange=True), xaxis=dict(fixedrange=True), height=450, margin=dict(l=0, r=0, t=20, b=0), showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), dragmode=False)
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
         
         conf_html = "".join([f"<span style='margin-right:15px;'>{k}: {v:.0f}%</span>" for k, v in res["confidences"].items()])
-        st.markdown(f<div style='font-size: 0.75rem; color: #6b7280; text-align: center; border-top: 1px solid #eee; padding-top: 8px;'>信頼度: {conf_html}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='font-size: 0.75rem; color: #6b7280; text-align: center; border-top: 1px solid #eee; padding-top: 8px;'>信頼度: {conf_html}</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
     with col2:
@@ -250,15 +237,10 @@ else:
             for i, sample in enumerate(res["raw_samples"]):
                 row = {k: (sample[k]["P"] + sample[k]["M"]) for k in ["CP", "NP", "A", "FC", "AC"]}
                 row_list.append(pd.Series(row, name=f"{i+1}回目"))
-            
-            raw_activity_df = pd.concat(row_list, axis=1).T
-            st.table(raw_activity_df)
+            st.table(pd.concat(row_list, axis=1).T)
             st.caption(f"※各自我状態における「活動量（①+②）」の独立試行データを表示しています。")
 
-    st.markdown("<div class='res-card'>", unsafe_allow_html=True)
-    st.markdown("<p style='font-size: 0.85rem; font-weight: bold; color: #2d6a4f; margin-bottom: 5px;'>📝 解析対象の文章</p>", unsafe_allow_html=True)
-    st.markdown(f"<div style='font-size: 0.9rem; color: #4b5563; background: #f9fafb; padding: 10px; border-radius: 8px; border: 1px inset #f3f4f6;'>{res['input_text']}</div>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("<div class='res-card'><p style='font-size: 0.85rem; font-weight: bold; color: #2d6a4f; margin-bottom: 5px;'>📝 解析対象の文章</p><div style='font-size: 0.9rem; color: #4b5563; background: #f9fafb; padding: 10px; border-radius: 8px; border: 1px inset #f3f4f6;'>"+res['input_text']+"</div></div>", unsafe_allow_html=True)
 
     if st.button("🔄 新しい文章を解析する", key="reset_btn"):
         st.session_state.diagnosis = None
