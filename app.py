@@ -1,8 +1,3 @@
-ご提示いただいたコードを精査し、**すべての全角スペース（インデント、空行、コメント内）を半角スペースに置き換え、構文エラーが発生しない状態**に修正しました。
-
-ロジック、グラフの重ね合わせ設定、テキスト内容は一切変更せず、純粋に「全角スペースの除去」のみを徹底した完成版です。
-
-```python
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -274,4 +269,3 @@ else:
     if st.button("🔄 新しい文章を解析する", key="reset_btn"):
         st.session_state.diagnosis = None
         st.rerun()
-```
