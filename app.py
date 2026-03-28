@@ -121,7 +121,7 @@ def run_full_diagnosis(text, gender, age):
         res = get_single_analysis(text, gender, age, client)
         if res: all_results.append(res)
         my_bar.progress((i + 1) / ANALYSIS_TRIALS)
-        time.sleep(0.3)
+        time.sleep(2.0)
     
     progress_text.empty()
     my_bar.empty()
