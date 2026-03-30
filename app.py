@@ -36,13 +36,22 @@ st.markdown("""
     .tts-btn:active { background: #dcfce7; }
 
     /* 印刷ボタン専用スタイル */
-    .print-btn { background-color: #ffffff; border: 1px solid #52b788; border-radius: 8px; color: #2d6a4f; cursor: pointer; width: 100%; height: 38px; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+    .print-btn { background: #ffffff; border: 1px solid #52b788; border-radius: 8px; color: #2d6a4f; cursor: pointer; width: 100%; height: 38px; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
     .print-btn:hover { background-color: #e8f5f1; }
 
     @media print {
-        section[data-testid="stSidebar"], .stButton, header, footer, .footer { display: none !important; }
-        .stApp { background-color: white !important; }
-        .res-card { border: 1px solid #eee !important; box-shadow: none !important; break-inside: avoid; }
+        section[data-testid="stSidebar"], .stButton, header, footer, .footer, .tts-btn, .print-btn { 
+            display: none !important; 
+        }
+        .stApp, .main, .stMain {
+            background-color: white !important;
+            display: block !important;
+        }
+        .res-card { 
+            border: 1px solid #eee !important; 
+            box-shadow: none !important; 
+            break-inside: avoid; 
+        }
     }
     </style>
     """, unsafe_allow_html=True)
