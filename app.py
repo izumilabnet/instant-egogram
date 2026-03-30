@@ -35,6 +35,10 @@ st.markdown("""
     .tts-btn { background: #f0fdf4; border: 1px solid #52b788; border-radius: 8px; color: #2d6a4f; cursor: pointer; width: 100%; height: 38px; font-size: 1.1rem; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
     .tts-btn:active { background: #dcfce7; }
 
+    /* 印刷ボタン専用スタイル */
+    .print-btn { background-color: #ffffff; border: 1px solid #52b788; border-radius: 8px; color: #2d6a4f; cursor: pointer; width: 100%; height: 38px; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+    .print-btn:hover { background-color: #e8f5f1; }
+
     @media print {
         section[data-testid="stSidebar"], .stButton, header, footer, .footer { display: none !important; }
         .stApp { background-color: white !important; }
@@ -194,7 +198,7 @@ else:
     col1, col2 = st.columns([1.2, 1])
     with col1:
         st.markdown("<div class='res-card'>", unsafe_allow_html=True)
-        head_col1, head_col2 = st.columns([4, 1])
+        head_col1, head_col2, head_col3 = st.columns([3, 0.5, 0.5])
         with head_col1: st.subheader("📊 あなたのエゴグラム")
         with head_col2:
             speech_msg = f"診断結果は、{res['性格類型']}です。特徴。{res['特徴']}。成長へ向けて。{res['成長へ向けて']}。適職。{res['適職']}。恋愛のアドバイス。{res['恋愛のアドバイス']}".replace('"', '”').replace('\n', ' ')
@@ -211,6 +215,14 @@ else:
                         synth.speak(uttr);
                     }}
                 ">🔊</button>
+            """, height=40)
+        with head_col3:
+            st.components.v1.html("""
+                <button class="print-btn" onclick="window.print();">🖨️</button>
+                <style>
+                .print-btn { background: #ffffff; border: 1px solid #52b788; border-radius: 8px; color: #2d6a4f; cursor: pointer; width: 100%; height: 38px; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+                .print-btn:hover { background-color: #f0fdf4; }
+                </style>
             """, height=40)
 
         plot_data = [{"項目": k, "Total": v["P"] + v["M"], "Positive": v["P"], "Block": -v["Z"]} for k, v in res["scores"].items()]
