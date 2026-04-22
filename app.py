@@ -114,11 +114,25 @@ def get_single_analysis(text, gender, age, client):
     - P: 建設的・望ましい思考・行動（光）
     - M: 破壊的・望ましくない思考・行動（影）
     - Z: 欠乏・不活性な状態（無）
-    必ずJSON形式のみで回答し、回答構成: {{"scores": {{"CP":{{"P":0,"M":0,"Z":0}}, "NP":{{"P":0,"M":0,"Z":0}}, "A":{{"P":0,"M":0,"Z":0}}, "FC":{{"P":0,"M":0,"Z":0}}, "AC":{{"P":0,"M":0,"Z":0}}}}, "性格類型": "...", "特徴": "...", "適職": "...", "恋愛のアドバイス": "...", "成長へ向けて": "..."}}"""
+    必ずJSON形式のみで回答し、回答構成: {{"scores": {{"CP":{{"P":0,"M":0,"Z":0}}, "NP":{{"P":0,"M":0,"Z":0}}, "A":{{"P":0,"M":0,"Z":0}}, "FC":{{"P":0,"M":0,"Z":0}}, "AC":{{"P":0,"M":0,"Z":0}}}}}}"""
     try:
         response = client.models.generate_content(
             model=model_id, contents=prompt_content,
             config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.2)
+        )
+        return json.loads(re.search(r'(\{.*\})', response.text.strip(), re.DOTALL).group(1))
+    except: return None
+
+def get_final_descriptions(text, gender, age, scores, client):
+    model_id = "gemini-2.5-flash"
+    prompt_content = f"""属性: {age}、{gender}。対象文章: '{text}'。
+    算出されたエゴグラムスコア: {json.dumps(scores)}
+    上記スコアと文章に基づき、以下の項目を日本語で回答せよ。
+    必ずJSON形式のみで回答し、回答構成: {{"性格類型": "...", "特徴": "...", "適職": "...", "恋愛のアドバイス": "...", "成長へ向けて": "..."}}"""
+    try:
+        response = client.models.generate_content(
+            model=model_id, contents=prompt_content,
+            config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.7)
         )
         return json.loads(re.search(r'(\{.*\})', response.text.strip(), re.DOTALL).group(1))
     except: return None
@@ -149,10 +163,7 @@ def run_full_diagnosis(text, gender, age):
         all_results.append(res)
         st.session_state.partial_results = all_results
         my_bar.progress((i + 1) / ANALYSIS_TRIALS)
-        time.sleep(3.0)
-    
-    progress_text.empty()
-    my_bar.empty()
+        time.sleep(2.0)
     
     final_scores = {}
     confidences = {}
@@ -174,13 +185,21 @@ def run_full_diagnosis(text, gender, age):
         count_in_range = sum(1 for v in activity_vals if (median_val - 1) <= v <= (median_val + 1))
         confidences[ego] = (count_in_range / ANALYSIS_TRIALS) * 100
 
-    base_res = all_results[0]
+    progress_text.markdown("<p style='color: #6d28d9; font-size: 0.9rem;'>Generating detailed insights...</p>", unsafe_allow_html=True)
+    desc_res = get_final_descriptions(text, gender, age, final_scores, client)
+    if desc_res is None:
+        st.error("⚠️ 解説の生成に失敗しました。もう一度「診断を開始」を押してください。")
+        return None
+
+    progress_text.empty()
+    my_bar.empty()
+    
     st.session_state.partial_results = []
     return {
         "scores": final_scores, "confidences": confidences, "raw_samples": [r["scores"] for r in all_results],
-        "性格類型": base_res.get("性格類型", ""), "特徴": base_res.get("特徴", ""),
-        "適職": base_res.get("適職", ""), "恋愛のアドバイス": base_res.get("恋愛のアドバイス", ""),
-        "成長へ向けて": base_res.get("成長へ向けて", ""), "input_text": text
+        "性格類型": desc_res.get("性格類型", ""), "特徴": desc_res.get("特徴", ""),
+        "適職": desc_res.get("適職", ""), "恋愛のアドバイス": desc_res.get("恋愛のアドバイス", ""),
+        "成長へ向けて": desc_res.get("成長へ向けて", ""), "input_text": text
     }
 
 # --- 4. メイン画面 ---
