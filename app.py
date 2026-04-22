@@ -121,7 +121,9 @@ def get_single_analysis(text, gender, age, client):
             config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.2)
         )
         return json.loads(re.search(r'(\{.*\})', response.text.strip(), re.DOTALL).group(1))
-    except: return None
+    except Exception as e:
+        st.error(f"解析失敗の詳細理由: {e}") # ここで原因を特定
+        return None
 
 def run_full_diagnosis(text, gender, age):
     api_key = os.environ.get("GEMINI_API_KEY")
@@ -149,7 +151,7 @@ def run_full_diagnosis(text, gender, age):
         all_results.append(res)
         st.session_state.partial_results = all_results
         my_bar.progress((i + 1) / ANALYSIS_TRIALS)
-        time.sleep(10.0)
+        time.sleep(3.0)
     
     progress_text.empty()
     my_bar.empty()
