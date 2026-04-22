@@ -107,27 +107,20 @@ if not st.session_state.auth:
     st.stop()
 
 # --- 3. 分析エンジン ---
-def get_batch_analysis(text, gender, age, client):
-    model_id = "gemini-2.0-flash"
+def get_single_analysis(text, gender, age, client):
+    model_id = "gemini-2.5-flash"
     prompt_content = f"""属性: {age}、{gender}。対象文章: '{text}' 
     エゴグラムの5つの自我状態(CP,NP,A,FC,AC)について、以下の3要素を0〜10で算出せよ。
     - P: 建設的・望ましい思考・行動（光）
     - M: 破壊的・望ましくない思考・行動（影）
     - Z: 欠乏・不活性な状態（無）
-    
-    【重要】独立した視点で{ANALYSIS_TRIALS}回分析を行い、結果をJSONのリスト形式で返してください。
-    回答の構造は以下のようにしてください:
-    [
-      {{"scores": {{"CP":{{"P":0,"M":0,"Z":0}}, ...}}, "性格類型": "...", "特徴": "...", "適職": "...", "恋愛のアドバイス": "...", "成長へ向けて": "..."}},
-      ... ({ANALYSIS_TRIALS}個のデータ)
-    ]
-    """
+    必ずJSON形式のみで回答し、回答構成: {{"scores": {{"CP":{{"P":0,"M":0,"Z":0}}, "NP":{{"P":0,"M":0,"Z":0}}, "A":{{"P":0,"M":0,"Z":0}}, "FC":{{"P":0,"M":0,"Z":0}}, "AC":{{"P":0,"M":0,"Z":0}}}}, "性格類型": "...", "特徴": "...", "適職": "...", "恋愛のアドバイス": "...", "成長へ向けて": "..."}}"""
     try:
         response = client.models.generate_content(
             model=model_id, contents=prompt_content,
-            config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.7)
+            config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.2)
         )
-        return json.loads(re.search(r'(\[.*\])', response.text.strip(), re.DOTALL).group(1))
+        return json.loads(re.search(r'(\{.*\})', response.text.strip(), re.DOTALL).group(1))
     except: return None
 
 def run_full_diagnosis(text, gender, age):
@@ -135,12 +128,31 @@ def run_full_diagnosis(text, gender, age):
     if not api_key: return None
     client = genai.Client(api_key=api_key)
     
-    with st.spinner('🎨 心理ベクトルを多角的にスキャン中...'):
-        all_results = get_batch_analysis(text, gender, age, client)
+    current_input_hash = hash(f"{text}{gender}{age}")
+    if st.session_state.last_input_hash != current_input_hash:
+        st.session_state.partial_results = []
+        st.session_state.last_input_hash = current_input_hash
+
+    all_results = st.session_state.partial_results
+    progress_text = st.empty()
+    my_bar = st.progress(len(all_results) / ANALYSIS_TRIALS)
     
-    if not all_results or len(all_results) < 1:
-        st.error("⚠️ 解析中にエラーが発生しました。30秒ほど置いてから再度お試しください。")
-        return None
+    start_count = len(all_results)
+    for i in range(start_count, ANALYSIS_TRIALS):
+        progress_text.markdown(f"<p style='color: #2d6a4f; font-size: 0.9rem;'>Analyzing psychological vectors... ({i+1} / {ANALYSIS_TRIALS})</p>", unsafe_allow_html=True)
+        res = get_single_analysis(text, gender, age, client)
+        
+        if res is None:
+            st.error(f"⚠️ API制限（429等）により{i+1}回目で中断しました。30秒ほど置いて、再度「診断を開始」ボタンを押してください。続きから再開します。")
+            return None
+            
+        all_results.append(res)
+        st.session_state.partial_results = all_results
+        my_bar.progress((i + 1) / ANALYSIS_TRIALS)
+        time.sleep(3.0)
+    
+    progress_text.empty()
+    my_bar.empty()
     
     final_scores = {}
     confidences = {}
@@ -160,9 +172,10 @@ def run_full_diagnosis(text, gender, age):
         }
         median_val = statistics.median(activity_vals)
         count_in_range = sum(1 for v in activity_vals if (median_val - 1) <= v <= (median_val + 1))
-        confidences[ego] = (count_in_range / len(all_results)) * 100
+        confidences[ego] = (count_in_range / ANALYSIS_TRIALS) * 100
 
     base_res = all_results[0]
+    st.session_state.partial_results = []
     return {
         "scores": final_scores, "confidences": confidences, "raw_samples": [r["scores"] for r in all_results],
         "性格類型": base_res.get("性格類型", ""), "特徴": base_res.get("特徴", ""),
@@ -181,7 +194,8 @@ if st.session_state.diagnosis is None:
         with col_input_2: age = st.selectbox("年齢", ["", "10代", "20代", "30代", "40代", "50代", "60代", "70代以上"], index=0)
         input_text = st.text_area("Analysis Text", height=200, key="main_input", label_visibility="collapsed", placeholder="分析する文章をここに入力してください")
         
-        if st.button("🚀 診断を開始", key="diag_btn"):
+        btn_label = "🚀 診断を開始" if not st.session_state.partial_results else f"🔄 診断を再開 ({len(st.session_state.partial_results)}/{ANALYSIS_TRIALS} 完了済み)"
+        if st.button(btn_label, key="diag_btn"):
             if input_text:
                 result = run_full_diagnosis(input_text, gender, age)
                 if result:
