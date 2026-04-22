@@ -1,4 +1,4 @@
 streamlit
 pandas
 plotly
-google-genai
+google-genai>=1.0.0
