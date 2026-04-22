@@ -151,7 +151,7 @@ def run_full_diagnosis(text, gender, age):
         all_results.append(res)
         st.session_state.partial_results = all_results
         my_bar.progress((i + 1) / ANALYSIS_TRIALS)
-        time.sleep(3.0)
+        time.sleep(20.0)
     
     progress_text.empty()
     my_bar.empty()
